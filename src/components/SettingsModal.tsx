@@ -1,4 +1,4 @@
-import React, 'react';
+import React from 'react';
 import { X, Settings, Key, Download, Upload, Languages, Shield, Database, Eye, EyeOff, HelpCircle } from 'lucide-react';
 import { APISettings } from '../types';
 import { storageUtils } from '../utils/storage';
