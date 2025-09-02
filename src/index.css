@@ -1,0 +1,415 @@
+@import url('https://fonts.googleapis.com/css2?family=Biryani:wght@200;300;400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Marathi:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  ::selection {
+    background-color: #3B82F6; /* A nice blue accent for selection */
+    color: #FFFFFF;
+  }
+  
+  :root {
+    --color-bg: #0A0A0A;
+    --color-sidebar: #141414;
+    --color-card: #1F1F1F;
+    --color-border: #2A2A2A;
+    --color-text-primary: #FFFFFF;
+    --color-text-secondary: #A0A0A0;
+    --color-text-placeholder: #6B7280;
+    --color-accent-bg: #FFFFFF;
+    --color-accent-text: #0A0A0A;
+    --color-accent-bg-hover: #F0F0F0;
+    --font-weight: 500;
+    --font-marathi: 'Biryani', sans-serif;
+    --font-english: 'Inter', sans-serif;
+  }
+  
+  body {
+    @apply bg-[var(--color-bg)] text-[var(--color-text-primary)] font-sans font-[var(--font-weight)];
+    font-family: var(--font-english);
+    overflow-x: hidden;
+  }
+  /* Enhanced Marathi/Devanagari font styling with Biryani */
+  body[data-lang="mr"],
+  .marathi-text,
+  [lang="mr"] {
+    font-family: var(--font-marathi) !important;
+    font-weight: 600 !important; /* Increased base weight for better visibility */
+    font-size: 1.15em !important; /* Slightly larger for better readability */
+    line-height: 1.7 !important; /* Adjusted line height for Biryani */
+    letter-spacing: 0.01em !important; /* Improved letter spacing */
+    text-rendering: optimizeLegibility;
+    -webkit-font-feature-settings: "liga" 1, "calt" 1, "kern" 1, "dlig" 1;
+    font-feature-settings: "liga" 1, "calt" 1, "kern" 1, "dlig" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Font weight mapping to maintain consistency with English */
+  .marathi-text.font-medium,
+  [lang="mr"].font-medium,
+  body[data-lang="mr"] .font-medium {
+    font-weight: 700 !important; /* Increased for better visibility */
+  }
+  .marathi-text.font-semibold,
+  [lang="mr"].font-semibold,
+  body[data-lang="mr"] .font-semibold {
+    font-weight: 800 !important; /* Increased for better visibility */
+  }
+  .marathi-text.font-bold,
+  [lang="mr"].font-bold,
+  body[data-lang="mr"] .font-bold {
+    font-weight: 900 !important; /* Maximum bold weight */
+  }
+  /* Force bold for specific UI elements in Marathi */
+  body[data-lang="mr"] button,
+  body[data-lang="mr"] .btn,
+  [lang="mr"] button,
+  [lang="mr"] .btn {
+    font-family: var(--font-marathi) !important;
+    font-weight: 700 !important; /* Bold weight for buttons */
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.5); /* Add text shadow for better visibility */
+  }
+  /* Specific adjustments for different UI elements in Marathi */
+  body[data-lang="mr"] h1,
+  body[data-lang="mr"] h2,
+  body[data-lang="mr"] h3,
+  body[data-lang="mr"] h4,
+  body[data-lang="mr"] h5,
+  body[data-lang="mr"] h6,
+  [lang="mr"] h1,
+  [lang="mr"] h2,
+  [lang="mr"] h3,
+  [lang="mr"] h4,
+  [lang="mr"] h5,
+  [lang="mr"] h6 {
+    font-family: var(--font-marathi) !important;
+    font-weight: 800 !important; /* Bold headings */
+    line-height: 1.5 !important;
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.3); /* Add text shadow for better visibility */
+  }
+  /* Input and form elements in Marathi */
+  body[data-lang="mr"] input,
+  body[data-lang="mr"] textarea,
+  body[data-lang="mr"] select,
+  [lang="mr"] input,
+  [lang="mr"] textarea,
+  [lang="mr"] select {
+    font-family: var(--font-marathi) !important;
+    font-weight: 600 !important; /* Medium weight for inputs */
+    font-size: 1.05em !important;
+  }
+  /* Placeholder text in Marathi */
+  body[data-lang="mr"] input::placeholder,
+  body[data-lang="mr"] textarea::placeholder,
+  [lang="mr"] input::placeholder,
+  [lang="mr"] textarea::placeholder {
+    font-family: var(--font-marathi) !important;
+    font-weight: 600 !important;
+    opacity: 0.7;
+  }
+  /* Force bold for navigation and important text in Marathi */
+  body[data-lang="mr"] .sidebar button,
+  body[data-lang="mr"] .sidebar .font-semibold,
+  [lang="mr"] .sidebar button,
+  [lang="mr"] .sidebar .font-semibold {
+    font-weight: 800 !important;
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.2);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+@layer components {
+  /* Enhanced Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-sidebar);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-secondary);
+  }
+  /* Smooth sidebar transitions */
+  .sidebar {
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transform: translateZ(0);
+  }
+  .sidebar-folded {
+    transform: translateX(-100%) translateZ(0);
+  }
+  /* Message animations */
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes bounceIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.3);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+    70% {
+      transform: scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: -200px 0;
+    }
+    100% {
+      background-position: calc(200px + 100%) 0;
+    }
+  }
+  .animate-slide-up {
+    animation: slideUp 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.3s ease-out;
+  }
+  .animate-bounce-in {
+    animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+  /* Smooth loading states */
+  .loading-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  /* Button hover effects */
+  .smooth-button {
+    transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transform: translateZ(0);
+  }
+  .smooth-button:hover {
+    transform: translateY(-1px) translateZ(0);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  .smooth-button:active {
+    transform: translateY(0) translateZ(0);
+    transition: all 0.1s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+  /* Message bubble improvements */
+  .message-bubble {
+    transition: all 0.2s ease-out;
+    transform: translateZ(0);
+  }
+  .message-bubble:hover {
+    transform: translateY(-1px) translateZ(0);
+  }
+  /* Smooth focus states */
+  .focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    transition: outline-offset 0.2s ease;
+  }
+  /* Chat input improvements */
+  .chat-input {
+    transition: all 0.2s ease;
+  }
+  .chat-input:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+  }
+  /* Typing indicator */
+  .typing-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #9CA3AF;
+    border-radius: 50%;
+    animation: typing 1.4s infinite ease-in-out;
+  }
+  .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+  .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes typing {
+    0%, 80%, 100% {
+      transform: scale(0.8);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  /* Enhanced mobile experience */
+  @media (max-width: 768px) {
+    /* Improved touch targets */
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    /* Better scroll momentum on iOS */
+    .scroll-container {
+      -webkit-overflow-scrolling: touch;
+      overflow-scrolling: touch;
+    }
+    /* Prevent zoom on input focus */
+    input, textarea, select {
+      font-size: 16px;
+    }
+    
+    /* Marathi adjustments for mobile */
+    body[data-lang="mr"] input,
+    body[data-lang="mr"] textarea,
+    [lang="mr"] input,
+    [lang="mr"] textarea {
+      font-size: 16px !important; /* Prevent zoom */
+    }
+  }
+  /* PWA Install Prompt Animation */
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  /* PWA Specific Styles */
+  @media (display-mode: standalone) {
+    body {
+      user-select: none;
+    }
+    /* Hide scrollbars in standalone mode for cleaner look */
+    ::-webkit-scrollbar {
+      width: 2px;
+    }
+    /* Better safe area handling */
+    .pwa-safe-area {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+  }
+  /* Mobile PWA adjustments */
+  @media (max-width: 768px) and (display-mode: standalone) {
+    .sidebar {
+      padding-top: env(safe-area-inset-top);
+    }
+    .mobile-chat-area {
+      padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+    }
+  }
+  /* Smooth modal transitions */
+  .modal-backdrop {
+    backdrop-filter: blur(4px);
+    transition: all 0.2s ease;
+  }
+  .modal-content {
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  .modal-content.open {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  /* Loading states */
+  .pulse-subtle {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  /* Improved accessibility */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    :root {
+      --color-border: #000000;
+      --color-text-primary: #000000;
+      --color-bg: #ffffff;
+    }
+    .dark {
+      --color-border: #ffffff;
+      --color-text-primary: #ffffff;
+      --color-bg: #000000;
+    }
+  }
+  /* Reduced motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  /* Smooth spring animations */
+  .spring-bounce {
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+  .spring-gentle {
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  /* Custom button styles that match chat UI */
+  .chat-ui-button {
+    background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+    color: white;
+    font-weight: 600;
+    transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  }
+  .chat-ui-button:hover {
+    background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    transform: translateY(-1px);
+  }
+  .chat-ui-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  }
+  .chat-ui-button:disabled {
+    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+}
