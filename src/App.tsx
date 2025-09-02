@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
+import React from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { SettingsModal } from './components/SettingsModal';
@@ -19,26 +19,32 @@ const defaultSettings: APISettings = {
 };
 
 function App() {
-  const { selectedLanguage } = useContext(LanguageContext);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [settings, setSettings] = useState<APISettings>(defaultSettings);
-  const [isLoading, setIsLoading] = useState(false);
-  const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
-  const [sidebarFolded, setSidebarFolded] = useState(false);
-  const stopStreamingRef = useRef(false);
+  const { selectedLanguage } = React.useContext(LanguageContext);
+  const [conversations, setConversations] = React.useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = React.useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [settings, setSettings] = React.useState<APISettings>(defaultSettings);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [streamingMessage, setStreamingMessage] = React.useState<Message | null>(null);
+  const [sidebarOpen, setSidebarOpen] = React.useState(window.innerWidth >= 768);
+  const [sidebarFolded, setSidebarFolded] = React.useState(false);
+  const stopStreamingRef = React.useRef(false);
 
   const { isInstallable, isInstalled, installApp, dismissInstallPrompt } = usePWA();
 
-  useEffect(() => {
+  React.useEffect(() => {
     const savedConversations = storageUtils.getConversations();
     const savedSettings = storageUtils.getSettings();
     setConversations(savedConversations);
     setSettings(savedSettings);
     if (savedConversations.length > 0) {
-      setCurrentConversationId(savedConversations[0].id);
+        // Initial sort to set the correct first conversation
+      const sorted = [...savedConversations].sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      });
+      setCurrentConversationId(sorted[0].id);
     }
     aiService.updateSettings(savedSettings, selectedLanguage);
 
@@ -48,11 +54,11 @@ function App() {
     }
   }, [selectedLanguage]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     storageUtils.saveConversations(conversations);
   }, [conversations]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const handleResize = () => {
       setSidebarOpen(window.innerWidth >= 768);
     };
@@ -60,7 +66,7 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded));
   }, [sidebarFolded]);
 
@@ -101,15 +107,40 @@ function App() {
   };
 
   const handleDeleteConversation = (id: string) => {
-    setConversations(prev => prev.filter(c => c.id !== id));
+    const remaining = conversations.filter(c => c.id !== id);
+    setConversations(remaining);
     if (currentConversationId === id) {
-      const remaining = conversations.filter(c => c.id !== id);
-      setCurrentConversationId(remaining.length > 0 ? remaining[0].id : null);
+      const sortedRemaining = [...remaining].sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      });
+      setCurrentConversationId(sortedRemaining.length > 0 ? sortedRemaining[0].id : null);
     }
     if (window.innerWidth < 768) {
       setSidebarOpen(false);
     }
   };
+
+  const handleRenameConversation = (id: string, newTitle: string) => {
+    setConversations(prev =>
+      prev.map(c => (c.id === id ? { ...c, title: newTitle, updatedAt: new Date() } : c))
+    );
+  };
+
+  const handleTogglePinConversation = (id: string) => {
+    setConversations(prev =>
+      prev.map(c => (c.id === id ? { ...c, isPinned: !c.isPinned } : c))
+    );
+  };
+
+  const sortedConversations = React.useMemo(() => {
+    return [...conversations].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }, [conversations]);
 
   const handleSaveSettings = (newSettings: APISettings) => {
     setSettings(newSettings);
@@ -131,8 +162,10 @@ function App() {
       return;
     }
 
-    let targetConversationId = currentConversationId;
-    if (!targetConversationId) {
+    let conversationToUpdate: Conversation | undefined;
+    let targetId = currentConversationId;
+
+    if (!targetId) {
       const newConversation: Conversation = {
         id: generateId(),
         title: generateConversationTitle(content),
@@ -141,83 +174,55 @@ function App() {
         updatedAt: new Date(),
       };
       setConversations(prev => [newConversation, ...prev]);
-      targetConversationId = newConversation.id;
-      setCurrentConversationId(targetConversationId);
+      targetId = newConversation.id;
+      setCurrentConversationId(targetId);
+      conversationToUpdate = newConversation;
+    } else {
+      conversationToUpdate = conversations.find(c => c.id === targetId);
     }
+    
+    if (!conversationToUpdate) return;
 
-    const userMessage: Message = {
-      id: generateId(),
-      content,
-      role: 'user',
-      timestamp: new Date(),
+    const userMessage: Message = { id: generateId(), content, role: 'user', timestamp: new Date() };
+    
+    const updatedConversation = {
+      ...conversationToUpdate,
+      messages: [...conversationToUpdate.messages, userMessage],
+      title: conversationToUpdate.messages.length === 0 ? generateConversationTitle(content) : conversationToUpdate.title,
+      updatedAt: new Date(),
     };
 
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === targetConversationId) {
-        const updatedMessages = [...conv.messages, userMessage];
-        const updatedTitle = conv.messages.length === 0 ? generateConversationTitle(content) : conv.title;
-        return {
-          ...conv,
-          title: updatedTitle,
-          messages: updatedMessages,
-          updatedAt: new Date(),
-        };
-      }
-      return conv;
-    }));
+    setConversations(prev => prev.map(c => (c.id === targetId ? updatedConversation : c)));
 
     setIsLoading(true);
     stopStreamingRef.current = false;
+    
     try {
-      const assistantMessage: Message = {
-        id: generateId(),
-        content: '',
-        role: 'assistant',
-        timestamp: new Date(),
-        model: settings.selectedModel,
-      };
+      const assistantMessage: Message = { id: generateId(), content: '', role: 'assistant', timestamp: new Date(), model: settings.selectedModel };
       setStreamingMessage(assistantMessage);
 
-      // This logic was slightly buggy, corrected to get the most recent message history
-      const updatedConversation = conversations.find(c => c.id === targetConversationId);
-      const conversationHistory = updatedConversation ? updatedConversation.messages : [userMessage];
-
-      const messages = conversationHistory.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      const historyForAPI = updatedConversation.messages.map(msg => ({ role: msg.role, content: msg.content }));
 
       let fullResponse = '';
-      for await (const chunk of aiService.generateStreamingResponse(messages, selectedLanguage)) {
-        if (stopStreamingRef.current) {
-          break;
-        }
+      for await (const chunk of aiService.generateStreamingResponse(historyForAPI, selectedLanguage)) {
+        if (stopStreamingRef.current) break;
         fullResponse += chunk;
         setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
       }
 
-      const finalAssistantMessage: Message = {
-        ...assistantMessage,
-        content: fullResponse,
-      };
-
-      setConversations(prev => prev.map(conv => {
-        if (conv.id === targetConversationId) {
-          // This was adding the user message twice. Corrected.
-          return {
-            ...conv,
-            messages: [...conv.messages, finalAssistantMessage],
-            updatedAt: new Date(),
-          };
+      const finalAssistantMessage: Message = { ...assistantMessage, content: fullResponse };
+      
+      setConversations(prev => prev.map(c => {
+        if (c.id === targetId) {
+          return { ...c, messages: [...c.messages, finalAssistantMessage], updatedAt: new Date() };
         }
-        return conv;
+        return c;
       }));
-      setStreamingMessage(null);
     } catch (error) {
       console.error('Error sending message:', error);
-      setStreamingMessage(null);
     } finally {
       setIsLoading(false);
+      setStreamingMessage(null);
       stopStreamingRef.current = false;
     }
   };
@@ -241,68 +246,41 @@ function App() {
     if (!currentConversation) return;
 
     const messageIndex = currentConversation.messages.findIndex(m => m.id === messageId);
-    if (messageIndex <= 0) return;
+    if (messageIndex === -1) return;
 
-    const updatedMessages = currentConversation.messages.slice(0, messageIndex);
-
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === currentConversationId) {
-        return {
-          ...conv,
-          messages: updatedMessages,
-          updatedAt: new Date(),
-        };
-      }
-      return conv;
-    }));
+    const historyToRegenerate = currentConversation.messages.slice(0, messageIndex);
+    
+    setConversations(prev => prev.map(c => (c.id === currentConversationId ? { ...c, messages: historyToRegenerate } : c)));
 
     setIsLoading(true);
     stopStreamingRef.current = false;
+    
     try {
-      const assistantMessage: Message = {
-        id: generateId(),
-        content: '',
-        role: 'assistant',
-        timestamp: new Date(),
-        model: settings.selectedModel,
-      };
+      const assistantMessage: Message = { id: generateId(), content: '', role: 'assistant', timestamp: new Date(), model: settings.selectedModel };
       setStreamingMessage(assistantMessage);
 
-      const messages = updatedMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      const historyForAPI = historyToRegenerate.map(msg => ({ role: msg.role, content: msg.content }));
 
       let fullResponse = '';
-      for await (const chunk of aiService.generateStreamingResponse(messages, selectedLanguage)) {
-        if (stopStreamingRef.current) {
-          break;
-        }
+      for await (const chunk of aiService.generateStreamingResponse(historyForAPI, selectedLanguage)) {
+        if (stopStreamingRef.current) break;
         fullResponse += chunk;
         setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
       }
 
-      const finalAssistantMessage: Message = {
-        ...assistantMessage,
-        content: fullResponse,
-      };
-
-      setConversations(prev => prev.map(conv => {
-        if (conv.id === currentConversationId) {
-          return {
-            ...conv,
-            messages: [...updatedMessages, finalAssistantMessage],
-            updatedAt: new Date(),
-          };
+      const finalAssistantMessage: Message = { ...assistantMessage, content: fullResponse };
+      
+      setConversations(prev => prev.map(c => {
+        if (c.id === currentConversationId) {
+          return { ...c, messages: [...historyToRegenerate, finalAssistantMessage], updatedAt: new Date() };
         }
-        return conv;
+        return c;
       }));
-      setStreamingMessage(null);
     } catch (error) {
       console.error('Error regenerating response:', error);
-      setStreamingMessage(null);
     } finally {
       setIsLoading(false);
+      setStreamingMessage(null);
       stopStreamingRef.current = false;
     }
   };
@@ -324,11 +302,13 @@ function App() {
       
       {sidebarOpen && (
         <Sidebar
-          conversations={conversations}
+          conversations={sortedConversations}
           currentConversationId={currentConversationId}
           onNewConversation={handleNewConversation}
           onSelectConversation={handleSelectConversation}
           onDeleteConversation={handleDeleteConversation}
+          onRenameConversation={handleRenameConversation}
+          onTogglePinConversation={handleTogglePinConversation}
           onOpenSettings={() => setIsSettingsOpen(true)}
           settings={settings}
           onModelChange={handleModelChange}
