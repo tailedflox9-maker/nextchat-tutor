@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { APISettings, Message } from '../types';
+import { APISettings } from '../types';
 
 class AIService {
   private googleAI: GoogleGenerativeAI | null = null;
@@ -91,7 +91,7 @@ If the user asks for a quiz, create a quiz question or practice problem based on
     }
     try {
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemma-2-9b-it', // Updated to a more recent and capable Gemma model
+        model: 'gemma-3-27b-it',
         generationConfig: {
           temperature: 0.7,
           topP: 0.8,
@@ -326,31 +326,13 @@ If the user asks for a quiz, create a quiz question or practice problem based on
         : `मिस्ट्रल त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`;
     }
   }
-  
-  async generateTitle(messages: Pick<Message, 'role' | 'content'>[]): Promise<string | null> {
-    if (!this.googleAI || !this.settings?.googleApiKey) {
-      console.error("Google AI not initialized for title generation.");
-      return null;
-    }
-    
-    try {
-      const model = this.googleAI.getGenerativeModel({ model: "gemma-2-9b-it" });
-      const conversationText = messages.map(m => `${m.role}: ${m.content}`).join('\n');
-      
-      const prompt = `Based on the following conversation, create a short, concise title (5 words or less). 
-      Respond ONLY with the title itself, and nothing else.
-      Conversation:\n${conversationText}`;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      let title = response.text();
-      
-      title = title.trim().replace(/^"|"$/g, '');
-      return title;
-    } catch (error) {
-      console.error("Error generating title:", error);
-      return null;
+  async generateResponse(messages: Array<{ role: string; content: string }>): Promise<string> {
+    let fullResponse = '';
+    for await (const chunk of this.generateStreamingResponse(messages, this.language)) {
+      fullResponse += chunk;
     }
+    return fullResponse;
   }
 }
 
