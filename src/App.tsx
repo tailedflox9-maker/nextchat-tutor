@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { SettingsModal } from './components/SettingsModal';
@@ -111,6 +111,26 @@ function App() {
     }
   };
 
+  const handleRenameConversation = (id: string, newTitle: string) => {
+    setConversations(prev =>
+      prev.map(c => (c.id === id ? { ...c, title: newTitle, updatedAt: new Date() } : c))
+    );
+  };
+
+  const handleTogglePinConversation = (id: string) => {
+    setConversations(prev =>
+      prev.map(c => (c.id === id ? { ...c, isPinned: !c.isPinned } : c))
+    );
+  };
+
+  const sortedConversations = useMemo(() => {
+    return [...conversations].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }, [conversations]);
+
   const handleSaveSettings = (newSettings: APISettings) => {
     setSettings(newSettings);
     storageUtils.saveSettings(newSettings);
@@ -132,6 +152,8 @@ function App() {
     }
 
     let targetConversationId = currentConversationId;
+    let tempCurrentConversation = currentConversation;
+
     if (!targetConversationId) {
       const newConversation: Conversation = {
         id: generateId(),
@@ -143,6 +165,7 @@ function App() {
       setConversations(prev => [newConversation, ...prev]);
       targetConversationId = newConversation.id;
       setCurrentConversationId(targetConversationId);
+      tempCurrentConversation = newConversation;
     }
 
     const userMessage: Message = {
@@ -156,12 +179,13 @@ function App() {
       if (conv.id === targetConversationId) {
         const updatedMessages = [...conv.messages, userMessage];
         const updatedTitle = conv.messages.length === 0 ? generateConversationTitle(content) : conv.title;
-        return {
+        tempCurrentConversation = {
           ...conv,
           title: updatedTitle,
           messages: updatedMessages,
           updatedAt: new Date(),
         };
+        return tempCurrentConversation;
       }
       return conv;
     }));
@@ -178,8 +202,8 @@ function App() {
       };
       setStreamingMessage(assistantMessage);
 
-      const conversationHistory = currentConversation
-        ? [...currentConversation.messages, userMessage]
+      const conversationHistory = tempCurrentConversation
+        ? tempCurrentConversation.messages
         : [userMessage];
 
       const messages = conversationHistory.map(msg => ({
@@ -318,15 +342,18 @@ function App() {
         settings={settings}
         onSaveSettings={handleSaveSettings}
         isSidebarFolded={sidebarFolded}
+        isSidebarOpen={sidebarOpen}
       />
       
       {sidebarOpen && (
         <Sidebar
-          conversations={conversations}
+          conversations={sortedConversations}
           currentConversationId={currentConversationId}
           onNewConversation={handleNewConversation}
           onSelectConversation={handleSelectConversation}
           onDeleteConversation={handleDeleteConversation}
+          onRenameConversation={handleRenameConversation}
+          onTogglePinConversation={handleTogglePinConversation}
           onOpenSettings={() => setIsSettingsOpen(true)}
           settings={settings}
           onModelChange={handleModelChange}
