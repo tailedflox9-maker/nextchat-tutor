@@ -13,6 +13,7 @@ export function ChatInput({ onSendMessage, isLoading, disabled = false, onStopGe
   const { selectedLanguage } = useContext(LanguageContext);
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +45,24 @@ export function ChatInput({ onSendMessage, isLoading, disabled = false, onStopGe
     resizeTextarea();
   }, [input, resizeTextarea]);
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      setInput(prev => `${prev}${prev ? '\n' : ''}${text}`);
+      setTimeout(() => textareaRef.current?.focus(), 0);
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Reset file input
+  };
+
+  const handlePlusClick = () => {
+    fileInputRef.current?.click();
+  };
+  
   const canSend = input.trim() && !disabled;
 
   return (
@@ -60,9 +79,21 @@ export function ChatInput({ onSendMessage, isLoading, disabled = false, onStopGe
       )}
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative flex items-end w-full p-2 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl">
-          <button type="button" className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+          <button 
+            type="button" 
+            onClick={handlePlusClick}
+            className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+            title="Attach file content"
+          >
             <PlusCircle className="w-5 h-5" />
           </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange}
+            accept=".txt,.md,.js,.ts,.jsx,.tsx,.py,.html,.css,.json"
+            className="hidden" 
+          />
           <textarea
             ref={textareaRef}
             value={input}
