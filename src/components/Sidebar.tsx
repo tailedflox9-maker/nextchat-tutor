@@ -69,7 +69,7 @@ export function Sidebar({
               className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors"
               title={selectedLanguage === 'en' ? 'Settings' : 'सेटिंग्ज'}
             >
-              <Settings className="w-5 h-5" />
+              <Settings className="w-4 h-4" />
             </button>
             {onToggleFold && (
               <button
@@ -77,7 +77,7 @@ export function Sidebar({
                 className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors hidden lg:block"
                 title={isFolded ? 'Expand' : 'Collapse'}
               >
-                {isFolded ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                {isFolded ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
               </button>
             )}
             <button
