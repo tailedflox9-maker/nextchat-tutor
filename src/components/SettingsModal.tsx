@@ -10,7 +10,6 @@ interface SettingsModalProps {
   settings: APISettings;
   onSaveSettings: (settings: APISettings) => void;
   isSidebarFolded: boolean;
-  isSidebarOpen: boolean;
 }
 
 const apiInfo = {
@@ -19,7 +18,7 @@ const apiInfo = {
   mistral: { name: 'Mistral', url: 'https://console.mistral.ai/api-keys' },
 };
 
-export function SettingsModal({ isOpen, onClose, settings, onSaveSettings, isSidebarFolded, isSidebarOpen }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, settings, onSaveSettings, isSidebarFolded }: SettingsModalProps) {
   const { selectedLanguage, setSelectedLanguage } = useContext(LanguageContext);
   const [localSettings, setLocalSettings] = useState<APISettings>(settings);
   const [visibleApis, setVisibleApis] = useState<Record<string, boolean>>({});
@@ -89,8 +88,6 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings, isSid
     fileInputRef.current?.click();
   };
 
-  const sidebarWidth = isSidebarOpen ? (isSidebarFolded ? '4rem' : '16rem') : '0rem';
-
   return (
     <>
       <div
@@ -102,8 +99,7 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings, isSid
       <div
         className={`fixed top-0 bottom-0 z-40 w-full max-w-xs bg-[var(--color-sidebar)] border-r border-[var(--color-border)] shadow-2xl transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        style={{ left: sidebarWidth }}
+        } ${isSidebarFolded ? 'lg:left-16' : 'lg:left-64'}`}
       >
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-[var(--color-border)]">
