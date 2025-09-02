@@ -1,373 +1,200 @@
-import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
-import { Sidebar } from './components/Sidebar';
-import { ChatArea } from './components/ChatArea';
-import { SettingsModal } from './components/SettingsModal';
-import { InstallPrompt } from './components/InstallPrompt';
-import { Conversation, Message, APISettings } from './types';
-import { aiService } from './services/aiService';
-import { storageUtils } from './utils/storage';
-import { generateId, generateConversationTitle } from './utils/helpers';
-import { usePWA } from './hooks/usePWA';
-import { Menu } from 'lucide-react';
-import { LanguageContext } from './contexts/LanguageContext';
+import React, 'react';
+import { X, Settings, Key, Download, Upload, Languages, Shield, Database, Eye, EyeOff, HelpCircle } from 'lucide-react';
+import { APISettings } from '../types';
+import { storageUtils } from '../utils/storage';
+import { LanguageContext } from '../contexts/LanguageContext';
 
-const defaultSettings: APISettings = {
-  googleApiKey: '',
-  zhipuApiKey: '',
-  mistralApiKey: '',
-  selectedModel: 'google',
-};
-
-function App() {
-  const { selectedLanguage } = useContext(LanguageContext);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [settings, setSettings] = useState<APISettings>(defaultSettings);
-  const [isLoading, setIsLoading] = useState(false);
-  const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
-  const [sidebarFolded, setSidebarFolded] = useState(false);
-  const stopStreamingRef = useRef(false);
-
-  const { isInstallable, isInstalled, installApp, dismissInstallPrompt } = usePWA();
-
-  useEffect(() => {
-    const savedConversations = storageUtils.getConversations();
-    const savedSettings = storageUtils.getSettings();
-    setConversations(savedConversations);
-    setSettings(savedSettings);
-    if (savedConversations.length > 0) {
-      setCurrentConversationId(savedConversations[0].id);
-    }
-    aiService.updateSettings(savedSettings, selectedLanguage);
-
-    const savedSidebarFolded = localStorage.getItem('ai-tutor-sidebar-folded');
-    if (savedSidebarFolded) {
-      setSidebarFolded(JSON.parse(savedSidebarFolded));
-    }
-  }, [selectedLanguage]);
-
-  useEffect(() => {
-    storageUtils.saveConversations(conversations);
-  }, [conversations]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setSidebarOpen(window.innerWidth >= 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded));
-  }, [sidebarFolded]);
-
-  const handleModelChange = (model: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral') => {
-    const newSettings = { ...settings, selectedModel: model };
-    setSettings(newSettings);
-    storageUtils.saveSettings(newSettings);
-    aiService.updateSettings(newSettings, selectedLanguage);
-  };
-
-  const handleToggleSidebarFold = () => {
-    setSidebarFolded(!sidebarFolded);
-  };
-
-  const currentConversation = conversations.find(c => c.id === currentConversationId);
-  const hasApiKey = settings.googleApiKey || settings.zhipuApiKey || settings.mistralApiKey;
-
-  const handleNewConversation = () => {
-    const newConversation: Conversation = {
-      id: generateId(),
-      title: selectedLanguage === 'en' ? 'New Chat' : 'नवीन चॅट',
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setConversations(prev => [newConversation, ...prev]);
-    setCurrentConversationId(newConversation.id);
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false);
-    }
-  };
-
-  const handleSelectConversation = (id: string) => {
-    setCurrentConversationId(id);
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false);
-    }
-  };
-
-  const handleDeleteConversation = (id: string) => {
-    setConversations(prev => prev.filter(c => c.id !== id));
-    if (currentConversationId === id) {
-      const remaining = conversations.filter(c => c.id !== id);
-      setCurrentConversationId(remaining.length > 0 ? remaining[0].id : null);
-    }
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false);
-    }
-  };
-
-  const handleSaveSettings = (newSettings: APISettings) => {
-    setSettings(newSettings);
-    storageUtils.saveSettings(newSettings);
-    aiService.updateSettings(newSettings, selectedLanguage);
-    setIsSettingsOpen(false);
-  };
-
-  const handleInstallApp = async () => {
-    const success = await installApp();
-    if (success) {
-      console.log('App installed successfully');
-    }
-  };
-
-  const handleSendMessage = async (content: string) => {
-    if (!hasApiKey) {
-      setIsSettingsOpen(true);
-      return;
-    }
-
-    let targetConversationId = currentConversationId;
-    if (!targetConversationId) {
-      const newConversation: Conversation = {
-        id: generateId(),
-        title: generateConversationTitle(content),
-        messages: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setConversations(prev => [newConversation, ...prev]);
-      targetConversationId = newConversation.id;
-      setCurrentConversationId(targetConversationId);
-    }
-
-    const userMessage: Message = {
-      id: generateId(),
-      content,
-      role: 'user',
-      timestamp: new Date(),
-    };
-
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === targetConversationId) {
-        const updatedMessages = [...conv.messages, userMessage];
-        const updatedTitle = conv.messages.length === 0 ? generateConversationTitle(content) : conv.title;
-        return {
-          ...conv,
-          title: updatedTitle,
-          messages: updatedMessages,
-          updatedAt: new Date(),
-        };
-      }
-      return conv;
-    }));
-
-    setIsLoading(true);
-    stopStreamingRef.current = false;
-    try {
-      const assistantMessage: Message = {
-        id: generateId(),
-        content: '',
-        role: 'assistant',
-        timestamp: new Date(),
-        model: settings.selectedModel,
-      };
-      setStreamingMessage(assistantMessage);
-
-      // This logic was slightly buggy, corrected to get the most recent message history
-      const updatedConversation = conversations.find(c => c.id === targetConversationId);
-      const conversationHistory = updatedConversation ? updatedConversation.messages : [userMessage];
-
-      const messages = conversationHistory.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
-
-      let fullResponse = '';
-      for await (const chunk of aiService.generateStreamingResponse(messages, selectedLanguage)) {
-        if (stopStreamingRef.current) {
-          break;
-        }
-        fullResponse += chunk;
-        setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
-      }
-
-      const finalAssistantMessage: Message = {
-        ...assistantMessage,
-        content: fullResponse,
-      };
-
-      setConversations(prev => prev.map(conv => {
-        if (conv.id === targetConversationId) {
-          // This was adding the user message twice. Corrected.
-          return {
-            ...conv,
-            messages: [...conv.messages, finalAssistantMessage],
-            updatedAt: new Date(),
-          };
-        }
-        return conv;
-      }));
-      setStreamingMessage(null);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setStreamingMessage(null);
-    } finally {
-      setIsLoading(false);
-      stopStreamingRef.current = false;
-    }
-  };
-
-  const handleEditMessage = (messageId: string, newContent: string) => {
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === currentConversationId) {
-        return {
-          ...conv,
-          messages: conv.messages.map(msg =>
-            msg.id === messageId ? { ...msg, content: newContent } : msg
-          ),
-          updatedAt: new Date(),
-        };
-      }
-      return conv;
-    }));
-  };
-
-  const handleRegenerateResponse = async (messageId: string) => {
-    if (!currentConversation) return;
-
-    const messageIndex = currentConversation.messages.findIndex(m => m.id === messageId);
-    if (messageIndex <= 0) return;
-
-    const updatedMessages = currentConversation.messages.slice(0, messageIndex);
-
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === currentConversationId) {
-        return {
-          ...conv,
-          messages: updatedMessages,
-          updatedAt: new Date(),
-        };
-      }
-      return conv;
-    }));
-
-    setIsLoading(true);
-    stopStreamingRef.current = false;
-    try {
-      const assistantMessage: Message = {
-        id: generateId(),
-        content: '',
-        role: 'assistant',
-        timestamp: new Date(),
-        model: settings.selectedModel,
-      };
-      setStreamingMessage(assistantMessage);
-
-      const messages = updatedMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
-
-      let fullResponse = '';
-      for await (const chunk of aiService.generateStreamingResponse(messages, selectedLanguage)) {
-        if (stopStreamingRef.current) {
-          break;
-        }
-        fullResponse += chunk;
-        setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
-      }
-
-      const finalAssistantMessage: Message = {
-        ...assistantMessage,
-        content: fullResponse,
-      };
-
-      setConversations(prev => prev.map(conv => {
-        if (conv.id === currentConversationId) {
-          return {
-            ...conv,
-            messages: [...updatedMessages, finalAssistantMessage],
-            updatedAt: new Date(),
-          };
-        }
-        return conv;
-      }));
-      setStreamingMessage(null);
-    } catch (error) {
-      console.error('Error regenerating response:', error);
-      setStreamingMessage(null);
-    } finally {
-      setIsLoading(false);
-      stopStreamingRef.current = false;
-    }
-  };
-
-  const handleStopGenerating = () => {
-    stopStreamingRef.current = true;
-  };
-
-  return (
-    <div className="h-screen flex bg-[var(--color-bg)] text-[var(--color-text-primary)] relative">
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        settings={settings}
-        onSaveSettings={handleSaveSettings}
-        isSidebarFolded={sidebarFolded}
-        isSidebarOpen={sidebarOpen}
-      />
-      
-      {sidebarOpen && (
-        <Sidebar
-          conversations={conversations}
-          currentConversationId={currentConversationId}
-          onNewConversation={handleNewConversation}
-          onSelectConversation={handleSelectConversation}
-          onDeleteConversation={handleDeleteConversation}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          settings={settings}
-          onModelChange={handleModelChange}
-          onCloseSidebar={() => setSidebarOpen(false)}
-          isFolded={sidebarFolded}
-          onToggleFold={handleToggleSidebarFold}
-        />
-      )}
-
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="fixed top-4 left-4 p-2 bg-[var(--color-card)] rounded-lg z-50 shadow-md hover:bg-[var(--color-border)] transition-colors"
-          title={selectedLanguage === 'en' ? 'Open sidebar' : 'साइडबार उघडा'}
-        >
-          <Menu className="w-5 h-5 text-[var(--color-text-secondary)]" />
-        </button>
-      )}
-
-      <ChatArea
-        messages={currentConversation?.messages || []}
-        onSendMessage={handleSendMessage}
-        isLoading={isLoading}
-        streamingMessage={streamingMessage}
-        hasApiKey={hasApiKey}
-        model={settings.selectedModel}
-        onEditMessage={handleEditMessage}
-        onRegenerateResponse={handleRegenerateResponse}
-        onStopGenerating={handleStopGenerating}
-      />
-
-      {isInstallable && !isInstalled && (
-        <InstallPrompt
-          onInstall={handleInstallApp}
-          onDismiss={dismissInstallPrompt}
-        />
-      )}
-    </div>
-  );
+interface SettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  settings: APISettings;
+  onSaveSettings: (settings: APISettings) => void;
+  isSidebarFolded: boolean;
+  isSidebarOpen: boolean;
 }
 
-export default App;
+const apiInfo = {
+  google: { name: 'Google AI', url: 'https://aistudio.google.com/app/apikey' },
+  zhipu: { name: 'ZhipuAI', url: 'https://open.bigmodel.cn/' },
+  mistral: { name: 'Mistral', url: 'https://console.mistral.ai/api-keys' },
+};
+
+export function SettingsModal({ isOpen, onClose, settings, onSaveSettings, isSidebarFolded, isSidebarOpen }: SettingsModalProps) {
+  const { selectedLanguage, setSelectedLanguage } = React.useContext(LanguageContext);
+  const [localSettings, setLocalSettings] = React.useState<APISettings>(settings);
+  const [visibleApis, setVisibleApis] = React.useState<Record<string, boolean>>({});
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    setLocalSettings(settings);
+  }, [settings]);
+
+  const handleLanguageChange = (language: 'en' | 'mr') => {
+    setSelectedLanguage(language);
+    localStorage.setItem('ai-tutor-language', language);
+  };
+
+  const toggleApiVisibility = (id: string) => {
+    setVisibleApis(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleSave = () => {
+    onSaveSettings(localSettings);
+  };
+
+  const handleExportData = () => {
+    const conversations = storageUtils.getConversations();
+    const data = {
+      conversations,
+      settings: storageUtils.getSettings(),
+      language: selectedLanguage,
+      exportDate: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-tutor-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        if (data.conversations) storageUtils.saveConversations(data.conversations);
+        if (data.settings) {
+          setLocalSettings(data.settings);
+          storageUtils.saveSettings(data.settings);
+        }
+        if (data.language) {
+          setSelectedLanguage(data.language);
+          localStorage.setItem('ai-tutor-language', data.language);
+        }
+        alert(selectedLanguage === 'en' ? 'Data imported successfully!' : 'डेटा यशस्वीपणे आयात केला!');
+      } catch (error) {
+        console.error('Error importing data:', error);
+        alert(selectedLanguage === 'en' ? 'Failed to import data.' : 'डेटा आयात अयशस्वी.');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  const sidebarWidth = isSidebarOpen ? (isSidebarFolded ? '4rem' : '16rem') : '0rem';
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        className={`fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+      <div
+        className={`fixed top-0 bottom-0 z-40 w-full max-w-xs bg-[var(--color-sidebar)] border-r border-[var(--color-border)] shadow-2xl transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{ left: sidebarWidth }}
+      >
+        <div className="flex flex-col h-full">
+          <div className="p-6 border-b border-[var(--color-border)]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Settings className="w-5 h-5" />
+                <h2 className="text-xl font-bold">
+                  {selectedLanguage === 'en' ? 'Settings' : 'सेटिंग्ज'}
+                </h2>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-card)] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6 overflow-y-auto flex-1 space-y-10">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                <Languages /> {selectedLanguage === 'en' ? 'General' : 'सामान्य'}
+              </h3>
+              <fieldset>
+                <legend className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                  {selectedLanguage === 'en' ? 'Language' : 'भाषा'}
+                </legend>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => handleLanguageChange('en')} className={`p-3 border rounded-lg transition-colors text-sm font-semibold ${selectedLanguage === 'en' ? 'bg-[var(--color-card)] border-[var(--color-border)]' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)]'}`}>English</button>
+                  <button onClick={() => handleLanguageChange('mr')} className={`p-3 border rounded-lg transition-colors text-sm font-semibold ${selectedLanguage === 'mr' ? 'bg-[var(--color-card)] border-[var(--color-border)]' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)]'}`}>मराठी</button>
+                </div>
+              </fieldset>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                <Shield /> {selectedLanguage === 'en' ? 'API Keys' : 'API की'}
+              </h3>
+              {Object.keys(apiInfo).map(key => {
+                const id = key as keyof typeof apiInfo;
+                const apiKeyId = `${id}ApiKey` as keyof APISettings;
+                return (
+                  <div key={id}>
+                    <label htmlFor={apiKeyId} className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center gap-1.5">
+                      {apiInfo[id].name} API Key
+                      <a href={apiInfo[id].url} target="_blank" rel="noopener noreferrer" title={`Get ${apiInfo[id].name} key`}>
+                        <HelpCircle className="w-3.5 h-3.5 text-[var(--color-text-placeholder)] hover:text-[var(--color-text-primary)]" />
+                      </a>
+                    </label>
+                    <div className="relative">
+                      <Key className="w-4 h-4 text-[var(--color-text-secondary)] absolute top-1/2 left-3 -translate-y-1/2" />
+                      <input
+                        id={apiKeyId}
+                        type={visibleApis[id] ? 'text' : 'password'}
+                        value={localSettings[apiKeyId]}
+                        onChange={(e) => setLocalSettings(prev => ({ ...prev, [apiKeyId]: e.target.value }))}
+                        placeholder={`${apiInfo[id].name} key`}
+                        className="w-full pl-9 pr-10 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-card)] focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors"
+                      />
+                      <button type="button" onClick={() => toggleApiVisibility(id)} className="absolute top-1/2 right-3 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+                        {visibleApis[id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                <Database /> {selectedLanguage === 'en' ? 'Data Management' : 'डेटा व्यवस्थापन'}
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={handleExportData} className="flex items-center justify-center gap-2 p-3 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-card)] transition-colors"> <Download className="w-4 h-4"/> {selectedLanguage === 'en' ? 'Export' : 'निर्यात'}</button>
+                <button onClick={triggerFileInput} className="flex items-center justify-center gap-2 p-3 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-card)] transition-colors"> <Upload className="w-4 h-4"/> {selectedLanguage === 'en' ? 'Import' : 'आयात'}</button>
+              </div>
+              <input type="file" ref={fileInputRef} onChange={handleImportData} accept=".json" className="hidden"/>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 p-6 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
+            <button onClick={onClose} className="px-6 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors font-semibold">
+              {selectedLanguage === 'en' ? 'Cancel' : 'रद्द करा'}
+            </button>
+            <button onClick={handleSave} className="px-6 py-2 bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] rounded-lg hover:bg-[var(--color-accent-bg-hover)] transition-colors font-semibold">
+              {selectedLanguage === 'en' ? 'Save' : 'जतन करा'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
