@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
-import { Bot } from 'lucide-react';
+import { Bot, Sparkles, Send } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { Message } from '../types';
@@ -17,16 +17,40 @@ interface ChatAreaProps {
   onStopGenerating: () => void;
 }
 
-export function ChatArea({ 
-  messages, 
-  onSendMessage, 
-  isLoading, 
-  streamingMessage, 
+const SkeletonMessageBubble = () => (
+  <div className="flex gap-4 mb-6 justify-start animate-pulse">
+    <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-card)]">
+      <Sparkles className="w-4 h-4 text-[var(--color-text-secondary)]" />
+    </div>
+    <div className="relative max-w-[85%] bg-[var(--color-card)] p-4 rounded-xl w-full">
+      <div className="space-y-2">
+        <div className="h-4 bg-[var(--color-border)] rounded w-3/4"></div>
+        <div className="h-4 bg-[var(--color-border)] rounded w-1/2"></div>
+      </div>
+    </div>
+  </div>
+);
+
+const ConversationStarter = ({ text, onSend }: { text: string; onSend: (text: string) => void }) => (
+  <button
+    onClick={() => onSend(text)}
+    className="text-left w-full p-3 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg hover:border-gray-600 hover:bg-gray-800 transition-all flex items-center justify-between group"
+  >
+    <span className="text-sm">{text}</span>
+    <Send className="w-4 h-4 text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors" />
+  </button>
+);
+
+export function ChatArea({
+  messages,
+  onSendMessage,
+  isLoading,
+  streamingMessage,
   hasApiKey,
   model,
   onEditMessage,
   onRegenerateResponse,
-  onStopGenerating
+  onStopGenerating,
 }: ChatAreaProps) {
   const { selectedLanguage } = useContext(LanguageContext);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -35,35 +59,50 @@ export function ChatArea({
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const lastScrollTop = useRef(0);
 
+  const starters = {
+    en: [
+      "Explain quantum computing in simple terms",
+      "Write a Python script for a simple web scraper",
+      "What are the best practices for React functional components?",
+      "Give me some ideas for a healthy breakfast",
+    ],
+    mr: [
+      "क्वांटम कॉम्प्युटिंग सोप्या भाषेत सांगा",
+      "एका सोप्या वेब स्क्रॅपरसाठी पायथन स्क्रिप्ट लिहा",
+      "रिॲक्ट फंक्शनल कंपोनेंट्ससाठी सर्वोत्तम पद्धती कोणत्या आहेत?",
+      "निरोगी नाश्त्यासाठी काही कल्पना द्या",
+    ],
+  };
+
   const scrollToBottom = (smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({ 
+    messagesEndRef.current?.scrollIntoView({
       behavior: smooth ? 'smooth' : 'auto',
-      block: 'end'
+      block: 'end',
     });
   };
 
   const handleScroll = () => {
     if (!messagesContainerRef.current) return;
-    
+
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 10;
-    const scrollingUp = scrollTop < lastScrollTop.current;
-    
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+    const scrollingUp = scrollTop < lastScrollTop.current && scrollTop > 0;
+
     if (scrollingUp && !isAtBottom) {
       setUserScrolled(true);
       setShowScrollToBottom(true);
     }
-    
+
     if (isAtBottom) {
       setUserScrolled(false);
       setShowScrollToBottom(false);
     }
-    
+
     lastScrollTop.current = scrollTop;
   };
 
   useEffect(() => {
-    if (!userScrolled && (messages.length > 0 || streamingMessage)) {
+    if (!userScrolled) {
       scrollToBottom();
     }
   }, [messages.length, streamingMessage?.content, userScrolled]);
@@ -76,12 +115,13 @@ export function ChatArea({
   }, [messages.length]);
 
   const allMessages = streamingMessage ? [...messages, streamingMessage] : messages;
+  const showSkeleton = isLoading && allMessages.length > 0 && streamingMessage?.content === '';
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[var(--color-bg)] relative">
-      {allMessages.length === 0 ? (
+      {allMessages.length === 0 && !isLoading ? (
         <div className="flex-1 flex items-center justify-center p-4">
-          <div className="text-center max-w-md">
+          <div className="text-center max-w-md w-full">
             <div className="w-24 h-24 bg-[var(--color-card)] rounded-full flex items-center justify-center mx-auto mb-6">
               <Bot className="w-12 h-12 text-[var(--color-text-primary)]" />
             </div>
@@ -89,11 +129,15 @@ export function ChatArea({
               {selectedLanguage === 'en' ? 'AI Tutor' : 'एआय शिक्षक'}
             </h2>
             <p className="text-[var(--color-text-secondary)] mb-6">
-              {selectedLanguage === 'en'
-                ? "How can I help you today?"
-                : 'मी तुम्हाला आज कशी मदत करू शकतो?'}
+              {selectedLanguage === 'en' ? 'How can I help you today?' : 'मी तुम्हाला आज कशी मदत करू शकतो?'}
             </p>
-            {!hasApiKey && (
+            {hasApiKey ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4 animate-fade-in-up">
+                {starters[selectedLanguage].map((text) => (
+                  <ConversationStarter key={text} text={text} onSend={onSendMessage} />
+                ))}
+              </div>
+            ) : (
               <div className="bg-yellow-900/50 border border-yellow-700/50 rounded-lg p-4 text-left">
                 <p className="text-sm text-yellow-300">
                   <strong>{selectedLanguage === 'en' ? 'Setup Required:' : 'सेटअप आवश्यक:'}</strong>{' '}
@@ -106,65 +150,51 @@ export function ChatArea({
           </div>
         </div>
       ) : (
-        <div 
-          ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto"
-          onScroll={handleScroll}
-          style={{
-            scrollBehavior: userScrolled ? 'auto' : 'smooth',
-            WebkitOverflowScrolling: 'touch'
-          }}
-        >
+        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto" onScroll={handleScroll}>
           <div className="max-w-3xl mx-auto px-4 py-6 pt-20">
-            {allMessages.map((message, index) => (
-              <div
+            {allMessages.map((message) => (
+              <MessageBubble
                 key={message.id}
-                className={`transition-all duration-300 ease-out ${
-                  index === allMessages.length - 1 && streamingMessage?.id === message.id
-                    ? 'animate-in slide-in-from-bottom-2'
-                    : ''
-                }`}
-              >
-                <MessageBubble
-                  message={message}
-                  isStreaming={streamingMessage?.id === message.id}
-                  model={model}
-                  onEditMessage={onEditMessage}
-                  onRegenerateResponse={onRegenerateResponse}
-                />
-              </div>
+                message={message}
+                isStreaming={streamingMessage?.id === message.id}
+                model={model}
+                onEditMessage={onEditMessage}
+                onRegenerateResponse={onRegenerateResponse}
+              />
             ))}
+            {showSkeleton && <SkeletonMessageBubble />}
           </div>
           <div ref={messagesEndRef} />
         </div>
       )}
 
-      {showScrollToBottom && (
-        <button
-          onClick={() => {
-            setUserScrolled(false);
-            setShowScrollToBottom(false);
-            scrollToBottom();
-          }}
-          className="absolute bottom-24 right-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200 z-10 hover:scale-105"
-          aria-label={selectedLanguage === 'en' ? 'Scroll to bottom' : 'खाली स्क्रोल करा'}
+      <button
+        onClick={() => {
+          setUserScrolled(false);
+          scrollToBottom();
+        }}
+        className={`absolute bottom-24 right-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-300 z-10 hover:scale-105 ${
+          showScrollToBottom
+            ? 'opacity-100 translate-y-0'
+            : 'opacity-0 translate-y-4 pointer-events-none'
+        }`}
+        aria-label={selectedLanguage === 'en' ? 'Scroll to bottom' : 'खाली स्क्रोल करा'}
+      >
+        <svg
+          className="w-4 h-4 text-[var(--color-text-secondary)]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
-          <svg
-            className="w-4 h-4 text-[var(--color-text-secondary)]"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 14l-7 7m0 0l-7-7m7 7V3"
-            />
-          </svg>
-        </button>
-      )}
-      
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 14l-7 7m0 0l-7-7m7 7V3"
+          />
+        </svg>
+      </button>
+
       <div className="p-4 bg-[var(--color-bg)]">
         <div className="max-w-3xl mx-auto">
           <ChatInput
