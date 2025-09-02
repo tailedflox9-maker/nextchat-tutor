@@ -318,7 +318,6 @@ function App() {
         settings={settings}
         onSaveSettings={handleSaveSettings}
         isSidebarFolded={sidebarFolded}
-        isSidebarOpen={sidebarOpen}
       />
       
       {sidebarOpen && (
