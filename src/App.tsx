@@ -33,17 +33,19 @@ function App() {
   const { isInstallable, isInstalled, installApp, dismissInstallPrompt } = usePWA();
 
   useEffect(() => {
-    // Note: The logic from your previous implementation was slightly different here.
-    // I'm restoring a version that correctly sorts and sets the initial conversation.
     const savedConversations = storageUtils.getConversations();
+    const savedSettings = storageUtils.getSettings();
+    
+    // Sort conversations on initial load to ensure consistency
     const sorted = savedConversations.sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
-    const savedSettings = storageUtils.getSettings();
+    
     setConversations(sorted);
     setSettings(savedSettings);
+
     if (sorted.length > 0) {
       setCurrentConversationId(sorted[0].id);
     }
@@ -111,7 +113,6 @@ function App() {
     setConversations(prev => prev.filter(c => c.id !== id));
     if (currentConversationId === id) {
       const remaining = conversations.filter(c => c.id !== id);
-       // Re-sort to find the next logical conversation
       const sortedRemaining = remaining.sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
@@ -356,7 +357,7 @@ function App() {
         settings={settings}
         onSaveSettings={handleSaveSettings}
         isSidebarFolded={sidebarFolded}
-        isSidebarOpen={sidebarOpen} // <<< THIS LINE WAS MISSING
+        isSidebarOpen={sidebarOpen} 
       />
       
       {sidebarOpen && (
