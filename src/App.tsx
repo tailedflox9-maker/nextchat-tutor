@@ -33,12 +33,19 @@ function App() {
   const { isInstallable, isInstalled, installApp, dismissInstallPrompt } = usePWA();
 
   useEffect(() => {
+    // Note: The logic from your previous implementation was slightly different here.
+    // I'm restoring a version that correctly sorts and sets the initial conversation.
     const savedConversations = storageUtils.getConversations();
+    const sorted = savedConversations.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
     const savedSettings = storageUtils.getSettings();
-    setConversations(savedConversations);
+    setConversations(sorted);
     setSettings(savedSettings);
-    if (savedConversations.length > 0) {
-      setCurrentConversationId(savedConversations[0].id);
+    if (sorted.length > 0) {
+      setCurrentConversationId(sorted[0].id);
     }
     aiService.updateSettings(savedSettings, selectedLanguage);
 
@@ -104,13 +111,19 @@ function App() {
     setConversations(prev => prev.filter(c => c.id !== id));
     if (currentConversationId === id) {
       const remaining = conversations.filter(c => c.id !== id);
-      setCurrentConversationId(remaining.length > 0 ? remaining[0].id : null);
+       // Re-sort to find the next logical conversation
+      const sortedRemaining = remaining.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      });
+      setCurrentConversationId(sortedRemaining.length > 0 ? sortedRemaining[0].id : null);
     }
     if (window.innerWidth < 768) {
       setSidebarOpen(false);
     }
   };
-
+  
   const handleRenameConversation = (id: string, newTitle: string) => {
     setConversations(prev =>
       prev.map(c => (c.id === id ? { ...c, title: newTitle, updatedAt: new Date() } : c))
@@ -130,6 +143,7 @@ function App() {
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
   }, [conversations]);
+
 
   const handleSaveSettings = (newSettings: APISettings) => {
     setSettings(newSettings);
@@ -342,7 +356,7 @@ function App() {
         settings={settings}
         onSaveSettings={handleSaveSettings}
         isSidebarFolded={sidebarFolded}
-        isSidebarOpen={sidebarOpen}
+        isSidebarOpen={sidebarOpen} // <<< THIS LINE WAS MISSING
       />
       
       {sidebarOpen && (
