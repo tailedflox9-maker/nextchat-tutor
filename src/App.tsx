@@ -132,9 +132,7 @@ function App() {
     }
 
     let targetConversationId = currentConversationId;
-    let isNewConversation = false;
     if (!targetConversationId) {
-      isNewConversation = true;
       const newConversation: Conversation = {
         id: generateId(),
         title: generateConversationTitle(content),
@@ -170,7 +168,6 @@ function App() {
 
     setIsLoading(true);
     stopStreamingRef.current = false;
-    let finalAssistantMessage: Message | null = null;
     try {
       const assistantMessage: Message = {
         id: generateId(),
@@ -181,7 +178,10 @@ function App() {
       };
       setStreamingMessage(assistantMessage);
 
-      const conversationHistory = conversations.find(c => c.id === targetConversationId)?.messages || [];
+      const conversationHistory = currentConversation
+        ? [...currentConversation.messages, userMessage]
+        : [userMessage];
+
       const messages = conversationHistory.map(msg => ({
         role: msg.role,
         content: msg.content,
@@ -196,7 +196,7 @@ function App() {
         setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
       }
 
-      finalAssistantMessage = {
+      const finalAssistantMessage: Message = {
         ...assistantMessage,
         content: fullResponse,
       };
@@ -205,7 +205,7 @@ function App() {
         if (conv.id === targetConversationId) {
           return {
             ...conv,
-            messages: [...conv.messages, finalAssistantMessage!],
+            messages: [...conv.messages, finalAssistantMessage],
             updatedAt: new Date(),
           };
         }
@@ -218,18 +218,6 @@ function App() {
     } finally {
       setIsLoading(false);
       stopStreamingRef.current = false;
-
-      // After the first exchange in a new conversation, generate a title
-      const wasNewConversation = isNewConversation || conversations.find(c => c.id === targetConversationId)?.messages.length === 2;
-      if (wasNewConversation && finalAssistantMessage && targetConversationId) {
-        const titleMessages = [userMessage, finalAssistantMessage];
-        const newTitle = await aiService.generateTitle(titleMessages);
-        if (newTitle) {
-          setConversations(prev => prev.map(conv => 
-            conv.id === targetConversationId ? { ...conv, title: newTitle } : conv
-          ));
-        }
-      }
     }
   };
 
