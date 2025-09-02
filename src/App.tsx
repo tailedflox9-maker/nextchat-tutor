@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { SettingsModal } from './components/SettingsModal';
@@ -35,15 +35,10 @@ function App() {
   useEffect(() => {
     const savedConversations = storageUtils.getConversations();
     const savedSettings = storageUtils.getSettings();
-    const sorted = savedConversations.sort((a, b) => {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
-    setConversations(sorted);
+    setConversations(savedConversations);
     setSettings(savedSettings);
-    if (sorted.length > 0) {
-      setCurrentConversationId(sorted[0].id);
+    if (savedConversations.length > 0) {
+      setCurrentConversationId(savedConversations[0].id);
     }
     aiService.updateSettings(savedSettings, selectedLanguage);
 
@@ -109,38 +104,12 @@ function App() {
     setConversations(prev => prev.filter(c => c.id !== id));
     if (currentConversationId === id) {
       const remaining = conversations.filter(c => c.id !== id);
-      const sortedRemaining = remaining.sort((a, b) => {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-      });
-      setCurrentConversationId(sortedRemaining.length > 0 ? sortedRemaining[0].id : null);
+      setCurrentConversationId(remaining.length > 0 ? remaining[0].id : null);
     }
     if (window.innerWidth < 768) {
       setSidebarOpen(false);
     }
   };
-  
-  const handleRenameConversation = (id: string, newTitle: string) => {
-    setConversations(prev =>
-      prev.map(c => (c.id === id ? { ...c, title: newTitle, updatedAt: new Date() } : c))
-    );
-  };
-
-  const handleTogglePinConversation = (id: string) => {
-    setConversations(prev =>
-      prev.map(c => (c.id === id ? { ...c, isPinned: !c.isPinned } : c))
-    );
-  };
-
-  const sortedConversations = useMemo(() => {
-    return [...conversations].sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
-  }, [conversations]);
-
 
   const handleSaveSettings = (newSettings: APISettings) => {
     setSettings(newSettings);
@@ -163,8 +132,6 @@ function App() {
     }
 
     let targetConversationId = currentConversationId;
-    let tempCurrentConversation = currentConversation;
-
     if (!targetConversationId) {
       const newConversation: Conversation = {
         id: generateId(),
@@ -176,7 +143,6 @@ function App() {
       setConversations(prev => [newConversation, ...prev]);
       targetConversationId = newConversation.id;
       setCurrentConversationId(targetConversationId);
-      tempCurrentConversation = newConversation;
     }
 
     const userMessage: Message = {
@@ -190,13 +156,12 @@ function App() {
       if (conv.id === targetConversationId) {
         const updatedMessages = [...conv.messages, userMessage];
         const updatedTitle = conv.messages.length === 0 ? generateConversationTitle(content) : conv.title;
-        tempCurrentConversation = {
+        return {
           ...conv,
           title: updatedTitle,
           messages: updatedMessages,
           updatedAt: new Date(),
         };
-        return tempCurrentConversation;
       }
       return conv;
     }));
@@ -213,8 +178,8 @@ function App() {
       };
       setStreamingMessage(assistantMessage);
 
-      const conversationHistory = tempCurrentConversation
-        ? tempCurrentConversation.messages
+      const conversationHistory = currentConversation
+        ? [...currentConversation.messages, userMessage]
         : [userMessage];
 
       const messages = conversationHistory.map(msg => ({
@@ -353,18 +318,15 @@ function App() {
         settings={settings}
         onSaveSettings={handleSaveSettings}
         isSidebarFolded={sidebarFolded}
-        isSidebarOpen={sidebarOpen}
       />
       
       {sidebarOpen && (
         <Sidebar
-          conversations={sortedConversations}
+          conversations={conversations}
           currentConversationId={currentConversationId}
           onNewConversation={handleNewConversation}
           onSelectConversation={handleSelectConversation}
           onDeleteConversation={handleDeleteConversation}
-          onRenameConversation={handleRenameConversation}
-          onTogglePinConversation={handleTogglePinConversation}
           onOpenSettings={() => setIsSettingsOpen(true)}
           settings={settings}
           onModelChange={handleModelChange}
