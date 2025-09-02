@@ -35,17 +35,13 @@ function App() {
   useEffect(() => {
     const savedConversations = storageUtils.getConversations();
     const savedSettings = storageUtils.getSettings();
-    
-    // Sort conversations on initial load to ensure consistency
     const sorted = savedConversations.sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
-    
     setConversations(sorted);
     setSettings(savedSettings);
-
     if (sorted.length > 0) {
       setCurrentConversationId(sorted[0].id);
     }
@@ -357,7 +353,7 @@ function App() {
         settings={settings}
         onSaveSettings={handleSaveSettings}
         isSidebarFolded={sidebarFolded}
-        isSidebarOpen={sidebarOpen} 
+        isSidebarOpen={sidebarOpen}
       />
       
       {sidebarOpen && (
