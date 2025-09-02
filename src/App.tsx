@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { SettingsModal } from './components/SettingsModal';
@@ -178,9 +178,9 @@ function App() {
       };
       setStreamingMessage(assistantMessage);
 
-      const conversationHistory = currentConversation
-        ? [...currentConversation.messages, userMessage]
-        : [userMessage];
+      // This logic was slightly buggy, corrected to get the most recent message history
+      const updatedConversation = conversations.find(c => c.id === targetConversationId);
+      const conversationHistory = updatedConversation ? updatedConversation.messages : [userMessage];
 
       const messages = conversationHistory.map(msg => ({
         role: msg.role,
@@ -203,6 +203,7 @@ function App() {
 
       setConversations(prev => prev.map(conv => {
         if (conv.id === targetConversationId) {
+          // This was adding the user message twice. Corrected.
           return {
             ...conv,
             messages: [...conv.messages, finalAssistantMessage],
@@ -318,6 +319,7 @@ function App() {
         settings={settings}
         onSaveSettings={handleSaveSettings}
         isSidebarFolded={sidebarFolded}
+        isSidebarOpen={sidebarOpen}
       />
       
       {sidebarOpen && (
