@@ -334,8 +334,7 @@ If the user asks for a quiz, create a quiz question or practice problem based on
     }
     
     try {
-      // Use a fast and powerful model for summarization. Gemini Flash is perfect for this.
-      const model = this.googleAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+      const model = this.googleAI.getGenerativeModel({ model: "gemma-2-9b-it" });
       const conversationText = messages.map(m => `${m.role}: ${m.content}`).join('\n');
       
       const prompt = `Based on the following conversation, create a short, concise title (5 words or less). 
@@ -346,8 +345,7 @@ If the user asks for a quiz, create a quiz question or practice problem based on
       const response = await result.response;
       let title = response.text();
       
-      // Clean up the title just in case the model adds quotes or extra text
-      title = title.trim().replace(/^"|"$/g, ''); // Remove surrounding quotes
+      title = title.trim().replace(/^"|"$/g, '');
       return title;
     } catch (error) {
       console.error("Error generating title:", error);
