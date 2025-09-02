@@ -15,6 +15,7 @@ export interface Conversation {
   createdAt: Date;
   updatedAt: Date;
   summary?: string;
+  isPinned?: boolean; // New property for pinning conversations
 }
 
 export interface Note {
