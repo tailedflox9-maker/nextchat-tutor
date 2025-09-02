@@ -1,57 +1,136 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import Sidebar from './components/Sidebar';
-import ChatArea from './components/ChatArea';
-import SettingsModal from './components/SettingsModal';
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { Sidebar } from './components/Sidebar';
+import { ChatArea } from './components/ChatArea';
+import { SettingsModal } from './components/SettingsModal';
+import { InstallPrompt } from './components/InstallPrompt';
 import { Conversation, Message, APISettings } from './types';
-import AIService from './services/aiService';
-import { saveConversations, loadConversations, saveSettings, loadSettings } from './utils/storage';
+import { aiService } from './services/aiService';
+import { storageUtils } from './utils/storage';
 import { generateId, generateConversationTitle } from './utils/helpers';
+import { usePWA } from './hooks/usePWA';
+import { Menu } from 'lucide-react';
+import { LanguageContext } from './contexts/LanguageContext';
 
-const App: React.FC = () => {
-  const [conversations, setConversations] = useState<Conversation[]>(loadConversations());
+const defaultSettings: APISettings = {
+  googleApiKey: '',
+  zhipuApiKey: '',
+  mistralApiKey: '',
+  selectedModel: 'google',
+};
+
+function App() {
+  const { selectedLanguage } = useContext(LanguageContext);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [settings, setSettings] = useState<APISettings>(loadSettings());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<APISettings>(defaultSettings);
+  const [isLoading, setIsLoading] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const [sidebarFolded, setSidebarFolded] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'mr'>('en');
+  const stopStreamingRef = useRef(false);
 
-  const aiService = new AIService(settings);
+  const { isInstallable, isInstalled, installApp, dismissInstallPrompt } = usePWA();
 
   useEffect(() => {
-    try {
-      const savedSidebarFolded = localStorage.getItem('ai-tutor-sidebar-folded');
-      if (savedSidebarFolded) {
-        setSidebarFolded(JSON.parse(savedSidebarFolded));
-      }
-    } catch (error) {
-      console.error('Error loading sidebar folded state:', error);
-      setSidebarFolded(false);
+    const savedConversations = storageUtils.getConversations();
+    const savedSettings = storageUtils.getSettings();
+    setConversations(savedConversations);
+    setSettings(savedSettings);
+    if (savedConversations.length > 0) {
+      setCurrentConversationId(savedConversations[0].id);
     }
+    aiService.updateSettings(savedSettings, selectedLanguage);
+
+    const savedSidebarFolded = localStorage.getItem('ai-tutor-sidebar-folded');
+    if (savedSidebarFolded) {
+      setSidebarFolded(JSON.parse(savedSidebarFolded));
+    }
+  }, [selectedLanguage]);
+
+  useEffect(() => {
+    storageUtils.saveConversations(conversations);
+  }, [conversations]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setSidebarOpen(window.innerWidth >= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
     localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded));
   }, [sidebarFolded]);
 
-  useEffect(() => {
-    saveConversations(conversations);
-    if (currentConversationId) {
-      const currentConversation = conversations.find(conv => conv.id === currentConversationId);
-      setMessages(currentConversation ? currentConversation.messages : []);
-    } else {
-      setMessages([]);
+  const handleModelChange = (model: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral') => {
+    const newSettings = { ...settings, selectedModel: model };
+    setSettings(newSettings);
+    storageUtils.saveSettings(newSettings);
+    aiService.updateSettings(newSettings, selectedLanguage);
+  };
+
+  const handleToggleSidebarFold = () => {
+    setSidebarFolded(!sidebarFolded);
+  };
+
+  const currentConversation = conversations.find(c => c.id === currentConversationId);
+  const hasApiKey = settings.googleApiKey || settings.zhipuApiKey || settings.mistralApiKey;
+
+  const handleNewConversation = () => {
+    const newConversation: Conversation = {
+      id: generateId(),
+      title: selectedLanguage === 'en' ? 'New Chat' : 'नवीन चॅट',
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    setConversations(prev => [newConversation, ...prev]);
+    setCurrentConversationId(newConversation.id);
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
     }
-  }, [conversations, currentConversationId]);
+  };
 
-  useEffect(() => {
-    saveSettings(settings);
-    aiService.updateSettings(settings);
-  }, [settings]);
+  const handleSelectConversation = (id: string) => {
+    setCurrentConversationId(id);
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
 
-  const handleSendMessage = useCallback(async (content: string, file?: File) => {
+  const handleDeleteConversation = (id: string) => {
+    setConversations(prev => prev.filter(c => c.id !== id));
+    if (currentConversationId === id) {
+      const remaining = conversations.filter(c => c.id !== id);
+      setCurrentConversationId(remaining.length > 0 ? remaining[0].id : null);
+    }
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
+
+  const handleSaveSettings = (newSettings: APISettings) => {
+    setSettings(newSettings);
+    storageUtils.saveSettings(newSettings);
+    aiService.updateSettings(newSettings, selectedLanguage);
+    setIsSettingsOpen(false);
+  };
+
+  const handleInstallApp = async () => {
+    const success = await installApp();
+    if (success) {
+      console.log('App installed successfully');
+    }
+  };
+
+  const handleSendMessage = async (content: string) => {
+    if (!hasApiKey) {
+      setIsSettingsOpen(true);
+      return;
+    }
+
     let targetConversationId = currentConversationId;
     if (!targetConversationId) {
       const newConversation: Conversation = {
@@ -60,189 +139,233 @@ const App: React.FC = () => {
         messages: [],
         createdAt: new Date(),
         updatedAt: new Date(),
-        isPinned: false,
       };
       setConversations(prev => [newConversation, ...prev]);
-      setCurrentConversationId(newConversation.id);
       targetConversationId = newConversation.id;
+      setCurrentConversationId(targetConversationId);
     }
 
     const userMessage: Message = {
       id: generateId(),
       content,
       role: 'user',
-      createdAt: new Date(),
-      model: settings.model,
-      file: file ? await file.text() : undefined,
+      timestamp: new Date(),
     };
 
-    setConversations(prev =>
-      prev.map(conv =>
-        conv.id === targetConversationId
-          ? { ...conv, messages: [...conv.messages, userMessage], updatedAt: new Date() }
-          : conv
-      )
-    );
-    setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
+    setConversations(prev => prev.map(conv => {
+      if (conv.id === targetConversationId) {
+        const updatedMessages = [...conv.messages, userMessage];
+        const updatedTitle = conv.messages.length === 0 ? generateConversationTitle(content) : conv.title;
+        return {
+          ...conv,
+          title: updatedTitle,
+          messages: updatedMessages,
+          updatedAt: new Date(),
+        };
+      }
+      return conv;
+    }));
 
+    setIsLoading(true);
+    stopStreamingRef.current = false;
     try {
-      const stream = await aiService.generateResponse(userMessage.content, settings.model);
-      let assistantMessage: Message = {
+      const assistantMessage: Message = {
         id: generateId(),
         content: '',
         role: 'assistant',
-        createdAt: new Date(),
-        model: settings.model,
+        timestamp: new Date(),
+        model: settings.selectedModel,
       };
-
       setStreamingMessage(assistantMessage);
 
-      for await (const chunk of stream) {
-        assistantMessage = {
-          ...assistantMessage,
-          content: assistantMessage.content + chunk,
-        };
-        setStreamingMessage({ ...assistantMessage });
+      const conversationHistory = currentConversation
+        ? [...currentConversation.messages, userMessage]
+        : [userMessage];
+
+      const messages = conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+      let fullResponse = '';
+      for await (const chunk of aiService.generateStreamingResponse(messages, selectedLanguage)) {
+        if (stopStreamingRef.current) {
+          break;
+        }
+        fullResponse += chunk;
+        setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
       }
 
-      setConversations(prev =>
-        prev.map(conv =>
-          conv.id === targetConversationId
-            ? { ...conv, messages: [...conv.messages, assistantMessage], updatedAt: new Date() }
-            : conv
-        )
-      );
-      setMessages(prev => [...prev, assistantMessage]);
+      const finalAssistantMessage: Message = {
+        ...assistantMessage,
+        content: fullResponse,
+      };
+
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === targetConversationId) {
+          return {
+            ...conv,
+            messages: [...conv.messages, finalAssistantMessage],
+            updatedAt: new Date(),
+          };
+        }
+        return conv;
+      }));
       setStreamingMessage(null);
     } catch (error) {
-      console.error('Error generating response:', error);
-      const errorMessage: Message = {
-        id: generateId(),
-        content: selectedLanguage === 'en' ? 'Error generating response' : 'प्रतिसाद तयार करताना त्रुटी',
-        role: 'assistant',
-        createdAt: new Date(),
-        model: settings.model,
-      };
-      setConversations(prev =>
-        prev.map(conv =>
-          conv.id === targetConversationId
-            ? { ...conv, messages: [...conv.messages, errorMessage], updatedAt: new Date() }
-            : conv
-        )
-      );
-      setMessages(prev => [...prev, errorMessage]);
+      console.error('Error sending message:', error);
+      setStreamingMessage(null);
     } finally {
       setIsLoading(false);
+      stopStreamingRef.current = false;
     }
-  }, [currentConversationId, settings, selectedLanguage]);
-
-  const handleSelectConversation = (id: string) => {
-    setCurrentConversationId(id);
   };
 
-  const handleNewConversation = () => {
-    setCurrentConversationId(null);
-    setMessages([]);
-    setStreamingMessage(null);
+  const handleEditMessage = (messageId: string, newContent: string) => {
+    setConversations(prev => prev.map(conv => {
+      if (conv.id === currentConversationId) {
+        return {
+          ...conv,
+          messages: conv.messages.map(msg =>
+            msg.id === messageId ? { ...msg, content: newContent } : msg
+          ),
+          updatedAt: new Date(),
+        };
+      }
+      return conv;
+    }));
   };
 
-  const handleDeleteConversation = (id: string) => {
-    setConversations(prev => prev.filter(conv => conv.id !== id));
-    if (currentConversationId === id) {
-      setCurrentConversationId(null);
-      setMessages([]);
+  const handleRegenerateResponse = async (messageId: string) => {
+    if (!currentConversation) return;
+
+    const messageIndex = currentConversation.messages.findIndex(m => m.id === messageId);
+    if (messageIndex <= 0) return;
+
+    const updatedMessages = currentConversation.messages.slice(0, messageIndex);
+
+    setConversations(prev => prev.map(conv => {
+      if (conv.id === currentConversationId) {
+        return {
+          ...conv,
+          messages: updatedMessages,
+          updatedAt: new Date(),
+        };
+      }
+      return conv;
+    }));
+
+    setIsLoading(true);
+    stopStreamingRef.current = false;
+    try {
+      const assistantMessage: Message = {
+        id: generateId(),
+        content: '',
+        role: 'assistant',
+        timestamp: new Date(),
+        model: settings.selectedModel,
+      };
+      setStreamingMessage(assistantMessage);
+
+      const messages = updatedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+      let fullResponse = '';
+      for await (const chunk of aiService.generateStreamingResponse(messages, selectedLanguage)) {
+        if (stopStreamingRef.current) {
+          break;
+        }
+        fullResponse += chunk;
+        setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
+      }
+
+      const finalAssistantMessage: Message = {
+        ...assistantMessage,
+        content: fullResponse,
+      };
+
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === currentConversationId) {
+          return {
+            ...conv,
+            messages: [...updatedMessages, finalAssistantMessage],
+            updatedAt: new Date(),
+          };
+        }
+        return conv;
+      }));
       setStreamingMessage(null);
+    } catch (error) {
+      console.error('Error regenerating response:', error);
+      setStreamingMessage(null);
+    } finally {
+      setIsLoading(false);
+      stopStreamingRef.current = false;
     }
   };
 
-  const handleRenameConversation = (id: string, newTitle: string) => {
-    setConversations(prev =>
-      prev.map(conv =>
-        conv.id === id ? { ...conv, title: newTitle, updatedAt: new Date() } : conv
-      )
-    );
+  const handleStopGenerating = () => {
+    stopStreamingRef.current = true;
   };
-
-  const handleTogglePinConversation = (id: string) => {
-    setConversations(prev =>
-      prev.map(conv =>
-        conv.id === id ? { ...conv, isPinned: !conv.isPinned } : conv
-      )
-    );
-  };
-
-  const handleModelChange = (model: string) => {
-    setSettings(prev => ({ ...prev, model }));
-  };
-
-  const handleImportConversations = (importedConversations: Conversation[]) => {
-    setConversations(prev => [...importedConversations, ...prev]);
-  };
-
-  const handleExportConversations = () => {
-    const dataStr = JSON.stringify(conversations);
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-    const exportFileDefaultName = 'ai-tutor-conversations.json';
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-  };
-
-  const handleSettingsUpdate = (newSettings: Partial<APISettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
-  };
-
-  const toggleSidebar = () => {
-    setSidebarFolded(prev => !prev);
-  };
-
-  const sidebarWidth = sidebarFolded ? 'w-16' : 'w-64';
 
   return (
-    <div className="flex h-screen bg-[var(--color-background)]">
-      <Sidebar
-        conversations={conversations}
-        currentConversationId={currentConversationId}
-        onSelectConversation={handleSelectConversation}
-        onNewConversation={handleNewConversation}
-        onDeleteConversation={handleDeleteConversation}
-        onRenameConversation={handleRenameConversation}
-        onTogglePinConversation={handleTogglePinConversation}
-        onModelChange={handleModelChange}
-        onImportConversations={handleImportConversations}
-        onExportConversations={handleExportConversations}
-        selectedLanguage={selectedLanguage}
-        setSelectedLanguage={setSelectedLanguage}
-        folded={sidebarFolded}
-        toggleSidebar={toggleSidebar}
+    <div className="h-screen flex bg-[var(--color-bg)] text-[var(--color-text-primary)] relative">
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={settings}
+        onSaveSettings={handleSaveSettings}
+        isSidebarFolded={sidebarFolded}
       />
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarFolded ? 'ml-16' : 'ml-64'}`}>
-        <ChatArea
-          messages={messages}
-          streamingMessage={streamingMessage}
-          onSendMessage={handleSendMessage}
-          isLoading={isLoading}
-          selectedLanguage={selectedLanguage}
-        />
-        <button
-          onClick={() => setIsSettingsOpen(true)}
-          className="fixed bottom-4 right-4 p-3 bg-[var(--color-primary)] text-[var(--color-button-text)] rounded-full shadow-lg hover:bg-[var(--color-primary-hover)] transition-colors"
-        >
-          {selectedLanguage === 'en' ? 'Settings' : 'सेटिंग्ज'}
-        </button>
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
+      
+      {sidebarOpen && (
+        <Sidebar
+          conversations={conversations}
+          currentConversationId={currentConversationId}
+          onNewConversation={handleNewConversation}
+          onSelectConversation={handleSelectConversation}
+          onDeleteConversation={handleDeleteConversation}
+          onOpenSettings={() => setIsSettingsOpen(true)}
           settings={settings}
-          onUpdateSettings={handleSettingsUpdate}
-          selectedLanguage={selectedLanguage}
-          sidebarWidth={sidebarWidth}
+          onModelChange={handleModelChange}
+          onCloseSidebar={() => setSidebarOpen(false)}
+          isFolded={sidebarFolded}
+          onToggleFold={handleToggleSidebarFold}
         />
-      </div>
+      )}
+
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-4 left-4 p-2 bg-[var(--color-card)] rounded-lg z-50 shadow-md hover:bg-[var(--color-border)] transition-colors"
+          title={selectedLanguage === 'en' ? 'Open sidebar' : 'साइडबार उघडा'}
+        >
+          <Menu className="w-5 h-5 text-[var(--color-text-secondary)]" />
+        </button>
+      )}
+
+      <ChatArea
+        messages={currentConversation?.messages || []}
+        onSendMessage={handleSendMessage}
+        isLoading={isLoading}
+        streamingMessage={streamingMessage}
+        hasApiKey={hasApiKey}
+        model={settings.selectedModel}
+        onEditMessage={handleEditMessage}
+        onRegenerateResponse={handleRegenerateResponse}
+        onStopGenerating={handleStopGenerating}
+      />
+
+      {isInstallable && !isInstalled && (
+        <InstallPrompt
+          onInstall={handleInstallApp}
+          onDismiss={dismissInstallPrompt}
+        />
+      )}
     </div>
   );
-};
+}
 
 export default App;
