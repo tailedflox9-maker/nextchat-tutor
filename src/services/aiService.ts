@@ -58,8 +58,8 @@ class AIService {
     }
 
     if (messages.length === 0) {
-      yield "Error: No messages provided to generate a response.";
-      return;
+      // This can happen in a new Persona chat, which is valid.
+      // We will rely on the system prompt to guide the first response.
     }
     
     const systemPrompt = conversationSystemPrompt || (language === 'en' ? defaultSystemPromptEN : defaultSystemPromptMR);
@@ -99,13 +99,8 @@ class AIService {
     }
     try {
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemma-3-27b-it',
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 2048,
-        },
+        model: 'gemini-1.5-flash',
+        systemInstruction: systemPrompt,
       });
       const history = messages.slice(0, -1).map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
@@ -115,8 +110,7 @@ class AIService {
         history: history,
       });
       const lastMessage = messages[messages.length - 1];
-      const prompt = `${systemPrompt}\n\nUser: ${lastMessage.content}`;
-      const result = await chat.sendMessageStream(prompt);
+      const result = await chat.sendMessageStream(lastMessage.content);
       let fullResponse = '';
       for await (const chunk of result.stream) {
         const chunkText = chunk.text();
@@ -172,14 +166,7 @@ class AIService {
       return;
     }
     
-    // ZHIPUAI FIX: Prepend system prompt to the first user message.
-    const zhipuMessages = [...messages];
-    if (zhipuMessages.length > 0 && zhipuMessages[0].role === 'user') {
-      zhipuMessages[0] = {
-        ...zhipuMessages[0],
-        content: `${systemPrompt}\n\n---\n\n${zhipuMessages[0].content}`,
-      };
-    }
+    const apiMessages = [{ role: 'system', content: systemPrompt }, ...messages];
 
     try {
       const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
@@ -190,10 +177,7 @@ class AIService {
         },
         body: JSON.stringify({
           model: 'GLM-4.5-Flash',
-          messages: zhipuMessages.map(msg => ({
-            role: msg.role,
-            content: msg.content,
-          })),
+          messages: apiMessages,
           stream: true,
           temperature: 0.7,
           max_tokens: 2048,
@@ -268,14 +252,7 @@ class AIService {
       return;
     }
 
-    // MISTRAL FIX: Prepend system prompt to the first user message for better instruction following.
-    const mistralMessages = [...messages];
-    if (mistralMessages.length > 0 && mistralMessages[0].role === 'user') {
-      mistralMessages[0] = {
-        ...mistralMessages[0],
-        content: `${systemPrompt}\n\n---\n\n${mistralMessages[0].content}`,
-      };
-    }
+    const apiMessages = [{ role: 'system', content: systemPrompt }, ...messages];
 
     try {
       const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
@@ -286,7 +263,7 @@ class AIService {
         },
         body: JSON.stringify({
           model: model === 'small' ? 'mistral-small-latest' : 'codestral-latest',
-          messages: mistralMessages, // Use the modified messages array
+          messages: apiMessages,
           stream: true,
           temperature: 0.7,
           max_tokens: 2048,
@@ -348,12 +325,21 @@ class AIService {
     }
   }
 
-  async generateResponse(messages: Array<{ role: string; content: string }>): Promise<string> {
-    let fullResponse = '';
-    for await (const chunk of this.generateStreamingResponse(messages, this.language)) {
-      fullResponse += chunk;
+  async enhancePrompt(prompt: string): Promise<string> {
+    if (!this.googleAI) {
+      throw new Error("Google AI not initialized. Cannot enhance prompt.");
     }
-    return fullResponse;
+    const model = this.googleAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const metaPrompt = `You are a world-class prompt engineering expert. Your task is to enhance a user-provided system prompt to make it more detailed, structured, and effective for guiding an AI chatbot.
+    - Add specific instructions and constraints.
+    - Define the AI's personality, tone, and forbidden actions.
+    - Provide clear formatting guidelines (e.g., "Use markdown").
+    - Return ONLY the enhanced prompt, without any explanations, preambles, or apologies.
+    
+    Here is the prompt to enhance: "${prompt}"`;
+
+    const result = await model.generateContent(metaPrompt);
+    return result.response.text();
   }
 }
 
