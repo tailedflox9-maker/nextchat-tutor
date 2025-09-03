@@ -39,13 +39,13 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
       <div className="flex justify-end gap-3 mt-4">
         <button
           onClick={onDismiss}
-          className="px-4 py-2 text-sm font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)] rounded-lg transition-colors"
+          className="px-4 py-2 text-sm font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)] rounded-lg transition-colors touch-target"
         >
           {selectedLanguage === 'en' ? 'Later' : 'नंतर'}
         </button>
         <button
           onClick={onInstall}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] text-[var(--color-accent-text)] rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] text-[var(--color-accent-text)] rounded-lg transition-colors touch-target"
         >
           <Download className="w-4 h-4" />
           {selectedLanguage === 'en' ? 'Install' : 'इंस्टॉल करा'}
