@@ -99,7 +99,7 @@ class AIService {
     }
     try {
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemma-2-27b-it',
+        model: 'gemma-3-27b-it',
         systemInstruction: systemPrompt,
       });
       const history = messages.slice(0, -1).map(msg => ({
@@ -326,7 +326,7 @@ class AIService {
   }
 
   async enhancePrompt(prompt: string): Promise<string> {
-    const metaPrompt = `Please enhance the following AI persona prompt to make it more effective, detailed, and engaging. Keep the core intent but add specificity and clarity. Return only the enhanced prompt without any explanations:"${prompt}"`;
+    const metaPrompt = `Enhance this AI persona prompt to make it more effective and engaging. Keep the core intent but add specificity. Make it concise and avoid markdown formatting. Return only the enhanced prompt without any explanations:"${prompt}"`;
     
     // Prioritize Mistral for enhancement due to its creative capabilities
     if (this.settings?.mistralApiKey) {
