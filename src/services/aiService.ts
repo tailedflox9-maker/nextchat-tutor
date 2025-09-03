@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, Content } from '@google/generative-ai';
 import { APISettings } from '../types';
 
 const defaultSystemPromptEN = `You are a helpful AI tutor. Provide clear, educational responses that help users learn effectively.
@@ -98,19 +98,37 @@ class AIService {
       return;
     }
     try {
+      // FIX: Switched to a reliable and capable model. `gemini-1.5-flash-latest` is a great choice.
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemma-3-27b-it',
+        model: 'gemini-1.5-flash-latest',
         systemInstruction: systemPrompt,
       });
-      const history = messages.slice(0, -1).map(msg => ({
+
+      // FIX: The Google API requires roles to alternate strictly. This merges consecutive messages 
+      // from the same role to prevent errors, which can happen after editing a message.
+      const mergedMessages: Array<{ role: string; content: string }> = [];
+      if (messages.length > 0) {
+        let currentMessage = { ...messages[0] };
+        for (let i = 1; i < messages.length; i++) {
+          if (messages[i].role === currentMessage.role) {
+            currentMessage.content += `\n\n${messages[i].content}`;
+          } else {
+            mergedMessages.push(currentMessage);
+            currentMessage = { ...messages[i] };
+          }
+        }
+        mergedMessages.push(currentMessage);
+      }
+
+      const contents: Content[] = mergedMessages.map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.content }],
       }));
-      const chat = model.startChat({
-        history: history,
-      });
-      const lastMessage = messages[messages.length - 1];
-      const result = await chat.sendMessageStream(lastMessage.content);
+
+      if (contents.length === 0) return;
+      
+      const result = await model.generateContentStream({ contents });
+      
       let fullResponse = '';
       for await (const chunk of result.stream) {
         const chunkText = chunk.text();
@@ -351,9 +369,10 @@ class AIService {
       }
     }
 
-    // Fallback to Google Gemma 2
+    // Fallback to Google Gemini
     if (this.googleAI) {
-      const model = this.googleAI.getGenerativeModel({ model: 'gemma-2-9b-it' });
+      // FIX: Use a consistent, reliable model
+      const model = this.googleAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
       const result = await model.generateContent(metaPrompt);
       return result.response.text();
     }
