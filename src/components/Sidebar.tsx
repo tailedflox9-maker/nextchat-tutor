@@ -118,25 +118,33 @@ export function Sidebar({
       <div className="p-2 border-b border-[var(--color-border)] flex flex-col gap-2">
         <div className={`flex items-center ${isFolded ? 'justify-center' : 'justify-between'}`}>
           {!isFolded && (
-            <h1 className="text-xl font-bold text-[var(--color-text-primary)] px-2">
-              {selectedLanguage === 'en' ? 'AI Tutor' : 'एआय शिक्षक'}
-            </h1>
+            <a 
+              href="https://tanmay-kalbande.github.io/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="flex items-center gap-2 group px-2"
+            >
+              <img src="/white-logo.png" alt="Logo" className="w-7 h-7" />
+              <h1 className="text-xl font-bold text-[var(--color-text-primary)] group-hover:text-gray-300 transition-colors">
+                {selectedLanguage === 'en' ? 'AI Tutor' : 'एआय शिक्षक'}
+              </h1>
+            </a>
           )}
           <div className="flex items-center">
             <button
               onClick={onOpenSettings}
-              className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors"
+              className="p-2.5 text-gray-200 hover:text-white hover:bg-[var(--color-card)] rounded-lg transition-colors"
               title={selectedLanguage === 'en' ? 'Settings' : 'सेटिंग्ज'}
             >
-              <Settings className="w-5 h-5" />
+              <Settings className="w-6 h-6" />
             </button>
             {onToggleFold && (
               <button
                 onClick={onToggleFold}
-                className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors hidden lg:block"
+                className="p-2.5 text-gray-200 hover:text-white hover:bg-[var(--color-card)] rounded-lg transition-colors hidden lg:block"
                 title={isFolded ? 'Expand' : 'Collapse'}
               >
-                {isFolded ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                {isFolded ? <ChevronRight className="w-6 h-6" /> : <ChevronLeft className="w-6 h-6" />}
               </button>
             )}
             <button
