@@ -34,9 +34,7 @@ export function MessageBubble({
   const [copied, setCopied] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isEditing, setIsEditing] = useState(message.isEditing || false);
-  const [showActions, setShowActions] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const bubbleRef = useRef<HTMLDivElement>(null);
   const copyTimeoutRef = useRef<NodeJS.Timeout>();
   const displayModel = isUser ? undefined : (
     modelNames[message.model || model || 'google'][selectedLanguage]
@@ -103,10 +101,7 @@ export function MessageBubble({
 
   return (
     <div
-      ref={bubbleRef}
       className={`flex gap-4 mb-6 ${isUser ? 'justify-end' : 'justify-start'} group transition-all duration-300 ease-out`}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
     >
       {!isUser && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-card)]">
@@ -233,7 +228,7 @@ export function MessageBubble({
           </div>
         )}
         {!isEditing && !isStreaming && message.content.length > 0 && (
-          <div className={`absolute -bottom-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
+          <div className={`absolute -bottom-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity`}>
              <div className="flex gap-1 p-1 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg">
                {!isUser && onRegenerateResponse && (
                  <button
