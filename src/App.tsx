@@ -391,10 +391,10 @@ function App() {
       {!sidebarOpen && (
         <button
           onClick={() => setSidebarOpen(true)}
-          className="fixed top-4 left-4 p-2 bg-[var(--color-card)] rounded-lg z-50 shadow-md hover:bg-[var(--color-border)] transition-colors"
+          className="fixed top-4 left-4 p-2.5 bg-[var(--color-card)] rounded-lg z-50 shadow-md hover:bg-[var(--color-border)] transition-colors"
           title={selectedLanguage === 'en' ? 'Open sidebar' : 'साइडबार उघडा'}
         >
-          <Menu className="w-5 h-5 text-[var(--color-text-secondary)]" />
+          <Menu className="w-6 h-6 text-[var(--color-text-secondary)]" />
         </button>
       )}
 
