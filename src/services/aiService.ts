@@ -16,7 +16,6 @@ const defaultSystemPromptMR = `तुम्ही एक उपयुक्त �
 
 class AIService {
   private googleAI: GoogleGenerativeAI | null = null;
-  private zhipuAI: any = null;
   private settings: APISettings | null = null;
   private language: 'en' | 'mr' = 'en';
 
@@ -33,13 +32,6 @@ class AIService {
         this.googleAI = new GoogleGenerativeAI(this.settings.googleApiKey);
       } catch (error) {
         console.error('Failed to initialize Google AI:', error);
-      }
-    }
-    if (this.settings.zhipuApiKey) {
-      try {
-        this.zhipuAI = { apiKey: this.settings.zhipuApiKey };
-      } catch (error) {
-        console.error('Failed to initialize ZhipuAI:', error);
       }
     }
   }
@@ -60,24 +52,19 @@ class AIService {
     const systemPrompt = conversationSystemPrompt || (language === 'en' ? defaultSystemPromptEN : defaultSystemPromptMR);
 
     try {
-      if (this.settings.selectedModel === 'google' && this.googleAI) {
+      if (this.googleAI) {
         yield* this.generateGoogleResponse(messages, systemPrompt, onUpdate);
-      } else if (this.settings.selectedModel === 'zhipu' && this.zhipuAI) {
-        yield* this.generateZhipuResponse(messages, systemPrompt, onUpdate);
-      } else if (this.settings.selectedModel.startsWith('mistral-')) {
-        const model = this.settings.selectedModel.split('-')[1] as 'small' | 'codestral';
-        yield* this.generateMistralResponse(messages, systemPrompt, model, onUpdate);
       } else {
         yield language === 'en'
-          ? "Selected model is not available or API key is missing."
-          : "निवडलेले मॉडेल उपलब्ध नाही किंवा API की गहाळ आहे.";
+          ? "Google AI is not available. Please check your API key."
+          : "गूगल एआय उपलब्ध नाही. कृपया आपली API की तपासा.";
       }
     } catch (error) {
       console.error('Error generating response:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       yield language === 'en'
-        ? `I apologize, but I encountered an error: ${errorMessage}. Please check your API key and try again.`
-        : `मला माफ करा, परंतु मला त्रुटी आली: ${errorMessage}. कृपया तुमची API की तपासा आणि पुन्हा प्रयत्न करा.`;
+        ? `I encountered an error: ${errorMessage}. Please check your API key and try again.`
+        : `मला त्रुटी आली: ${errorMessage}. कृपया तुमची API की तपासा आणि पुन्हा प्रयत्न करा.`;
     }
   }
 
@@ -97,7 +84,7 @@ class AIService {
         model: 'gemma-3-27b-it',
       });
 
-      // Merge same-role messages to avoid SDK errors
+      // Merge same-role messages
       const mergedMessages: Array<{ role: string; content: string }> = [];
       if (messages.length > 0) {
         let currentMessage = { ...messages[0] };
@@ -112,6 +99,13 @@ class AIService {
         mergedMessages.push(currentMessage);
       }
 
+      // Prepend system prompt into first user message
+      if (mergedMessages.length > 0 && mergedMessages[0].role === 'user') {
+        mergedMessages[0].content = `${systemPrompt}\n\n${mergedMessages[0].content}`;
+      } else {
+        mergedMessages.unshift({ role: 'user', content: systemPrompt });
+      }
+
       const contents: Content[] = mergedMessages.map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.content }],
@@ -119,10 +113,7 @@ class AIService {
 
       if (contents.length === 0) return;
 
-      const result = await model.generateContentStream({
-        systemInstruction: { role: "system", parts: [{ text: systemPrompt }] },
-        contents,
-      });
+      const result = await model.generateContentStream({ contents });
 
       let fullResponse = '';
       for await (const chunk of result.stream) {
@@ -135,33 +126,18 @@ class AIService {
       }
       if (!fullResponse.trim()) {
         yield this.language === 'en'
-          ? "I apologize, but I couldn't generate a response. Please try again."
-          : "मला माफ करा, पण मी प्रतिसाद तयार करू शकलो नाही. कृपया पुन्हा प्रयत्न करा.";
+          ? "I couldn't generate a response. Please try again."
+          : "मी प्रतिसाद तयार करू शकलो नाही. कृपया पुन्हा प्रयत्न करा.";
       }
     } catch (error) {
       console.error('Google AI API Error:', error);
       if (error instanceof Error) {
-        const errorMsg = error.message.toLowerCase();
-        if (errorMsg.includes('api key') || errorMsg.includes('authentication')) {
-          yield this.language === 'en'
-            ? "Invalid API key. Please check your Google AI API key in settings."
-            : "अवैध API की. कृपया सेटिंग्जमध्ये आपली Google AI API की तपासा.";
-        } else if (errorMsg.includes('quota') || errorMsg.includes('limit')) {
-          yield this.language === 'en'
-            ? "API quota exceeded. Please check your usage limits or try again later."
-            : "API कोटा ओलांडला आहे. कृपया आपल्या वापराच्या मर्यादा तपासा किंवा नंतर पुन्हा प्रयत्न करा.";
-        } else if (errorMsg.includes('safety') || errorMsg.includes('blocked')) {
-          yield this.language === 'en'
-            ? "The response was blocked by safety filters. Please try rephrasing your question."
-            : "सुरक्षा फिल्टरद्वारे प्रतिसाद अवरोधित केला गेला. कृपया आपला प्रश्न पुन्हा शब्दबद्ध करण्याचा प्रयत्न करा.";
-        } else {
-          yield this.language === 'en'
-            ? `Google AI Error: ${error.message}`
-            : `गूगल एआय त्रुटी: ${error.message}`;
-        }
+        yield this.language === 'en'
+          ? `Google AI Error: ${error.message}`
+          : `गूगल एआय त्रुटी: ${error.message}`;
       } else {
         yield this.language === 'en'
-          ? "An unexpected error occurred with Google AI. Please try again."
+          ? "Unexpected error with Google AI. Please try again."
           : "गूगल एआयसह अनपेक्षित त्रुटी आली. कृपया पुन्हा प्रयत्न करा.";
       }
     }
