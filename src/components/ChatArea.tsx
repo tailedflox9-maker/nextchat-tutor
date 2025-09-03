@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Info } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
-import { Message } from '../types';
+import { Conversation, Message } from '../types';
 import { LanguageContext } from '../contexts/LanguageContext';
 
 interface ChatAreaProps {
-  messages: Message[];
+  conversation: Conversation | undefined;
   onSendMessage: (message: string) => void;
   isLoading: boolean;
   streamingMessage?: Message | null;
@@ -32,7 +32,7 @@ const SkeletonMessageBubble = () => (
 );
 
 export function ChatArea({
-  messages,
+  conversation,
   onSendMessage,
   isLoading,
   streamingMessage,
@@ -48,6 +48,8 @@ export function ChatArea({
   const [userScrolled, setUserScrolled] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const lastScrollTop = useRef(0);
+
+  const messages = conversation?.messages || [];
 
   const scrollToBottom = (smooth = true) => {
     messagesEndRef.current?.scrollIntoView({
@@ -90,12 +92,11 @@ export function ChatArea({
   }, [messages.length]);
 
   const allMessages = streamingMessage ? [...messages, streamingMessage] : messages;
-  // Fixed: Only show skeleton if we're loading but don't have a streaming message
   const showSkeleton = isLoading && allMessages.length > 0 && !streamingMessage;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[var(--color-bg)] relative">
-      {allMessages.length === 0 && !isLoading ? (
+      {allMessages.length === 0 && !isLoading && !conversation ? (
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center max-w-md w-full">
             <div className="w-24 h-24 bg-[var(--color-card)] rounded-full flex items-center justify-center mx-auto mb-6 p-4">
@@ -118,7 +119,20 @@ export function ChatArea({
         </div>
       ) : (
         <div ref={messagesContainerRef} className="flex-1 overflow-y-auto" onScroll={handleScroll}>
-          <div className="max-w-3xl mx-auto px-4 py-6 pt-20">
+          <div className="max-w-3xl mx-auto px-4 py-6 pt-8">
+            {conversation?.isPersona && conversation.systemPrompt && (
+              <div className="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl mb-6 animate-fade-in-up">
+                <div className="flex items-center gap-2 mb-2">
+                  <Info className="w-4 h-4 text-blue-400" />
+                  <h4 className="font-semibold text-sm text-[var(--color-text-primary)]">
+                    {selectedLanguage === 'en' ? 'Active Persona' : 'सक्रिय Persona'}
+                  </h4>
+                </div>
+                <p className="text-sm text-[var(--color-text-secondary)] italic leading-relaxed max-h-20 overflow-y-auto">
+                  "{conversation.systemPrompt}"
+                </p>
+              </div>
+            )}
             {allMessages.map((message) => (
               <MessageBubble
                 key={message.id}
