@@ -105,7 +105,7 @@ export function ChatInput({ onSendMessage, isLoading, disabled = false, onStopGe
                 : selectedLanguage === 'en' ? 'Ask anything...' : 'काहीही विचारा...'
             }
             disabled={disabled || isLoading}
-            className="flex-1 min-h-[24px] max-h-[120px] p-2 bg-transparent resize-none focus:outline-none disabled:bg-transparent disabled:text-[var(--color-text-placeholder)] text-[var(--color-text-primary)] placeholder-[var(--color-text-placeholder)] font-medium"
+            className="flex-1 min-h-[24px] max-h-[120px] p-2 bg-transparent resize-none focus:outline-none disabled:bg-transparent disabled:text-[var(--color-text-placeholder)] text-[var(--color-text-primary)] placeholder-[var(--color-text-placeholder)] font-semibold"
             rows={1}
             style={{ scrollbarWidth: 'none' }}
           />
