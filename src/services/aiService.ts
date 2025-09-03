@@ -43,6 +43,11 @@ class AIService {
       return;
     }
 
+    if (messages.length === 0) {
+      yield "Error: No messages provided to generate a response.";
+      return;
+    }
+
     const systemPrompt = language === 'en'
       ? `You are a helpful AI tutor. Provide clear, educational responses that help users learn effectively.
 Use markdown formatting with headings, lists, and code blocks to structure your answers.
@@ -163,10 +168,16 @@ If the user asks for a quiz, create a quiz question or practice problem based on
         : "झिपूएआय योग्यरित्या कॉन्फिगर केलेले नाही.";
       return;
     }
-    const messagesWithSystemPrompt = [
-      { role: 'system', content: systemPrompt },
-      ...messages,
-    ];
+    
+    // ZHIPUAI FIX: Prepend system prompt to the first user message.
+    const zhipuMessages = [...messages];
+    if (zhipuMessages.length > 0 && zhipuMessages[0].role === 'user') {
+      zhipuMessages[0] = {
+        ...zhipuMessages[0],
+        content: `${systemPrompt}\n\n---\n\n${zhipuMessages[0].content}`,
+      };
+    }
+
     try {
       const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
         method: 'POST',
@@ -176,7 +187,7 @@ If the user asks for a quiz, create a quiz question or practice problem based on
         },
         body: JSON.stringify({
           model: 'GLM-4.5-Flash',
-          messages: messagesWithSystemPrompt.map(msg => ({
+          messages: zhipuMessages.map(msg => ({
             role: msg.role,
             content: msg.content,
           })),
