@@ -112,7 +112,7 @@ export function MessageBubble({
         className="relative max-w-[85%] bg-[var(--color-card)] p-4 rounded-xl"
       >
         {!isUser && displayModel && (
-          <div className="text-sm text-[var(--color-text-primary)] mb-2 font-semibold">
+          <div className="text-xs text-[var(--color-text-secondary)] mb-2 font-medium tracking-wide">
             {displayModel}
           </div>
         )}
@@ -150,7 +150,7 @@ export function MessageBubble({
             </p>
           </div>
         ) : (
-          <div className={`prose prose-invert prose-base max-w-none leading-relaxed font-normal`}>
+          <div className={`prose prose-invert prose-base max-w-none leading-relaxed ${isUser ? 'font-medium' : 'font-normal'}`}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
