@@ -57,11 +57,6 @@ class AIService {
       return;
     }
 
-    if (messages.length === 0) {
-      // This can happen in a new Persona chat, which is valid.
-      // We will rely on the system prompt to guide the first response.
-    }
-    
     const systemPrompt = conversationSystemPrompt || (language === 'en' ? defaultSystemPromptEN : defaultSystemPromptMR);
 
     try {
@@ -98,14 +93,11 @@ class AIService {
       return;
     }
     try {
-      // RESTORED: Using the exact model you requested.
       const model = this.googleAI.getGenerativeModel({
         model: 'gemma-3-27b-it',
-        systemInstruction: systemPrompt,
       });
 
-      // FIX: This part is crucial. The Google API requires roles to alternate strictly.
-      // This code merges consecutive messages from the same role to prevent errors.
+      // Merge same-role messages to avoid SDK errors
       const mergedMessages: Array<{ role: string; content: string }> = [];
       if (messages.length > 0) {
         let currentMessage = { ...messages[0] };
@@ -126,9 +118,12 @@ class AIService {
       }));
 
       if (contents.length === 0) return;
-      
-      const result = await model.generateContentStream({ contents });
-      
+
+      const result = await model.generateContentStream({
+        systemInstruction: { role: "system", parts: [{ text: systemPrompt }] },
+        contents,
+      });
+
       let fullResponse = '';
       for await (const chunk of result.stream) {
         const chunkText = chunk.text();
@@ -172,6 +167,7 @@ class AIService {
     }
   }
 
+  // ---- Zhipu and Mistral functions remain unchanged ----
   private async *generateZhipuResponse(
     messages: Array<{ role: string; content: string }>,
     systemPrompt: string,
@@ -183,9 +179,7 @@ class AIService {
         : "झिपूएआय योग्यरित्या कॉन्फिगर केलेले नाही.";
       return;
     }
-    
     const apiMessages = [{ role: 'system', content: systemPrompt }, ...messages];
-
     try {
       const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
         method: 'POST',
@@ -271,7 +265,6 @@ class AIService {
     }
 
     const apiMessages = [{ role: 'system', content: systemPrompt }, ...messages];
-
     try {
       const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
         method: 'POST',
@@ -346,7 +339,6 @@ class AIService {
   async enhancePrompt(prompt: string): Promise<string> {
     const metaPrompt = `Enhance this AI persona prompt to make it more effective and engaging. Keep the core intent but add specificity. Make it concise and avoid markdown formatting. Return only the enhanced prompt without any explanations:"${prompt}"`;
     
-    // Prioritize Mistral for enhancement due to its creative capabilities
     if (this.settings?.mistralApiKey) {
       try {
         const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
@@ -369,7 +361,6 @@ class AIService {
       }
     }
 
-    // Fallback to Google Gemma 2 (as in your original file)
     if (this.googleAI) {
       const model = this.googleAI.getGenerativeModel({ model: 'gemma-2-9b-it' });
       const result = await model.generateContent(metaPrompt);
