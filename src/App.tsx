@@ -213,6 +213,7 @@ function App() {
       content: msg.content,
     }));
 
+    // Optimistic UI update: Add user message immediately
     setConversations(prev => prev.map(conv => {
       if (conv.id === targetConversationId) {
         const updatedMessages = [...conv.messages, userMessage];
@@ -253,11 +254,12 @@ function App() {
         content: fullResponse,
       };
 
+      // **FIX:** Only add the *assistant's* final message. The user message is already in state.
       setConversations(prev => prev.map(conv => {
         if (conv.id === targetConversationId) {
           return {
             ...conv,
-            messages: [...conv.messages, userMessage, finalAssistantMessage],
+            messages: [...conv.messages, finalAssistantMessage],
             updatedAt: new Date(),
           };
         }
@@ -273,9 +275,10 @@ function App() {
         role: 'assistant',
         timestamp: new Date(),
       };
+      // **FIX:** Only add the *error* message. The user message is already in state.
       setConversations(prev => prev.map(conv => {
         if (conv.id === targetConversationId) {
-          return { ...conv, messages: [...conv.messages, userMessage, errorMessage] };
+          return { ...conv, messages: [...conv.messages, errorMessage] };
         }
         return conv;
       }));
