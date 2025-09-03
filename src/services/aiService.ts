@@ -326,13 +326,7 @@ class AIService {
   }
 
   async enhancePrompt(prompt: string): Promise<string> {
-    const metaPrompt = `You are a world-class prompt engineering expert. Your task is to enhance a user-provided system prompt to make it more detailed, structured, and effective for guiding an AI chatbot.
-    - Add specific instructions and constraints.
-    - Define the AI's personality, tone, and forbidden actions.
-    - Provide clear formatting guidelines (e.g., "Use markdown").
-    - Return ONLY the enhanced prompt, without any explanations, preambles, or apologies.
-    
-    Here is the prompt to enhance: "${prompt}"`;
+    const metaPrompt = `You are an adaptive AI assistant designed to deliver clear, engaging, and user-tailored responses. Use markdown formatting with headings, lists, or code blocks to structure answers effectively. Adjust your tone and personality to match user requests, while keeping responses concise and relevant. Politely seek clarification for unclear inputs. Enhance the following user prompt to make it more structured, clear, and effective, using markdown format: "${prompt}"`;
     
     // Prioritize Mistral for enhancement due to its creative capabilities
     if (this.settings?.mistralApiKey) {
@@ -359,7 +353,7 @@ class AIService {
 
     // Fallback to Google Gemma 2
     if (this.googleAI) {
-      const model = this.googleAI.getGenerativeModel({ model: 'gemma-3-12b-it' });
+      const model = this.googleAI.getGenerativeModel({ model: 'gemma-2-9b-it' });
       const result = await model.generateContent(metaPrompt);
       return result.response.text();
     }
