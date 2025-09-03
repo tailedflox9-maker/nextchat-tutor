@@ -20,39 +20,53 @@ const defaultSettings: APISettings = {
 
 function App() {
   const { selectedLanguage } = useContext(LanguageContext);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [settings, setSettings] = useState<APISettings>(defaultSettings);
+
+  // --- START: Synchronous state initialization from localStorage to prevent UI flash ---
+  const [initialConversations] = useState(() => storageUtils.getConversations());
+
+  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
+  const [settings, setSettings] = useState<APISettings>(() => storageUtils.getSettings());
+  
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(() => {
+    if (initialConversations.length > 0) {
+      // Sort to find the most recent/pinned conversation to display first, same logic as in useMemo
+      const sorted = [...initialConversations].sort((a, b) => {
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      });
+      return sorted[0].id;
+    }
+    return null;
+  });
+
+  const [sidebarFolded, setSidebarFolded] = useState(() => {
+      const saved = localStorage.getItem('ai-tutor-sidebar-folded');
+      return saved ? JSON.parse(saved) : false;
+  });
+  // --- END: Synchronous state initialization ---
+
   const [isLoading, setIsLoading] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
-  const [sidebarFolded, setSidebarFolded] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const stopStreamingRef = useRef(false);
 
   const { isInstallable, isInstalled, installApp, dismissInstallPrompt } = usePWA();
 
+  // --- START: Refactored useEffect hooks ---
   useEffect(() => {
-    const savedConversations = storageUtils.getConversations();
-    const savedSettings = storageUtils.getSettings();
-    setConversations(savedConversations);
-    setSettings(savedSettings);
-    if (savedConversations.length > 0) {
-      setCurrentConversationId(savedConversations[0].id);
-    }
-    aiService.updateSettings(savedSettings, selectedLanguage);
-
-    const savedSidebarFolded = localStorage.getItem('ai-tutor-sidebar-folded');
-    if (savedSidebarFolded) {
-      setSidebarFolded(JSON.parse(savedSidebarFolded));
-    }
-  }, [selectedLanguage]);
+    // Update the AI service when settings or language change.
+    aiService.updateSettings(settings, selectedLanguage);
+  }, [settings, selectedLanguage]);
 
   useEffect(() => {
+    // Save conversations to localStorage whenever they are modified.
     storageUtils.saveConversations(conversations);
   }, [conversations]);
 
   useEffect(() => {
+    // Handle window resize for sidebar visibility.
     const handleResize = () => {
       setSidebarOpen(window.innerWidth >= 768);
     };
@@ -61,8 +75,10 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // Save the sidebar folded state to localStorage.
     localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded));
   }, [sidebarFolded]);
+  // --- END: Refactored useEffect hooks ---
 
   const handleModelChange = (model: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral') => {
     const newSettings = { ...settings, selectedModel: model };
