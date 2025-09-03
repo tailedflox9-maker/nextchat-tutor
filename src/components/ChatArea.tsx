@@ -115,7 +115,8 @@ export function ChatArea({
   }, [messages.length]);
 
   const allMessages = streamingMessage ? [...messages, streamingMessage] : messages;
-  const showSkeleton = isLoading && allMessages.length > 0 && streamingMessage?.content === '';
+  // Fixed: Only show skeleton if we're loading but don't have a streaming message
+  const showSkeleton = isLoading && allMessages.length > 0 && !streamingMessage;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[var(--color-bg)] relative">
