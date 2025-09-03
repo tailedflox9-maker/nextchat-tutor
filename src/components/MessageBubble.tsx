@@ -123,7 +123,7 @@ export function MessageBubble({
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full min-h-[120px] p-3 border border-[var(--color-border)] rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-bg)] text-[var(--color-text-primary)] font-normal"
+              className="w-full min-w-72 min-h-[120px] p-3 border border-[var(--color-border)] rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-bg)] text-[var(--color-text-primary)] font-normal"
               placeholder={selectedLanguage === 'en' ? 'Edit your message...' : 'आपला संदेश संपादित करा...'}
             />
             <div className="flex gap-2 justify-end">
@@ -150,7 +150,7 @@ export function MessageBubble({
             </p>
           </div>
         ) : (
-          <div className={`prose prose-invert prose-base max-w-none leading-relaxed ${isUser ? 'font-medium' : 'font-normal'}`}>
+          <div className={`prose prose-invert prose-base max-w-none leading-relaxed ${isUser ? 'font-semibold' : 'font-normal'}`}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
