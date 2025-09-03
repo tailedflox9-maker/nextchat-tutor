@@ -12,457 +12,454 @@ import { Menu } from 'lucide-react';
 import { LanguageContext } from './contexts/LanguageContext';
 
 const defaultSettings: APISettings = {
-  googleApiKey: '',
-  zhipuApiKey: '',
-  mistralApiKey: '',
-  selectedModel: 'google',
+  googleApiKey: '',
+  zhipuApiKey: '',
+  mistralApiKey: '',
+  selectedModel: 'google',
 };
 
 function App() {
-  const { selectedLanguage } = useContext(LanguageContext);
-  // --- START: Synchronous state initialization from localStorage to prevent UI flash ---
-  const [initialConversations] = useState(() => storageUtils.getConversations());
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-  const [settings, setSettings] = useState<APISettings>(() => storageUtils.getSettings());
-  
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(() => {
-    if (initialConversations.length > 0) {
-      // Sort to find the most recent/pinned conversation to display first, same logic as in useMemo
-      const sorted = [...initialConversations].sort((a, b) => {
-          if (a.isPinned && !b.isPinned) return -1;
-          if (!a.isPinned && b.isPinned) return 1;
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-      });
-      return sorted[0].id;
-    }
-    return null;
-  });
-  const [sidebarFolded, setSidebarFolded] = useState(() => {
-      const saved = localStorage.getItem('ai-tutor-sidebar-folded');
-      return saved ? JSON.parse(saved) : false;
-  });
-  // --- END: Synchronous state initialization ---
-  const [isLoading, setIsLoading] = useState(false);
-  const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const stopStreamingRef = useRef(false);
-  const { isInstallable, isInstalled, installApp, dismissInstallPrompt } = usePWA();
+  const { selectedLanguage } = useContext(LanguageContext);
 
-  // --- START: Refactored useEffect hooks ---
-  useEffect(() => {
-    // Update the AI service when settings or language change.
-    aiService.updateSettings(settings, selectedLanguage);
-  }, [settings, selectedLanguage]);
+  // --- START: Synchronous state initialization from localStorage to prevent UI flash ---
+  const [initialConversations] = useState(() => storageUtils.getConversations());
 
-  useEffect(() => {
-    // Save conversations to localStorage whenever they are modified.
-    storageUtils.saveConversations(conversations);
-  }, [conversations]);
+  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
+  const [settings, setSettings] = useState<APISettings>(() => storageUtils.getSettings());
+  
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(() => {
+    if (initialConversations.length > 0) {
+      // Sort to find the most recent/pinned conversation to display first, same logic as in useMemo
+      const sorted = [...initialConversations].sort((a, b) => {
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      });
+      return sorted[0].id;
+    }
+    return null;
+  });
 
-  useEffect(() => {
-    // Handle window resize for sidebar visibility.
-    const handleResize = () => {
-      setSidebarOpen(window.innerWidth >= 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const [sidebarFolded, setSidebarFolded] = useState(() => {
+      const saved = localStorage.getItem('ai-tutor-sidebar-folded');
+      return saved ? JSON.parse(saved) : false;
+  });
+  // --- END: Synchronous state initialization ---
 
-  useEffect(() => {
-    // Save the sidebar folded state to localStorage.
-    localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded));
-  }, [sidebarFolded]);
-  // --- END: Refactored useEffect hooks ---
+  const [isLoading, setIsLoading] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const stopStreamingRef = useRef(false);
 
-  const handleModelChange = (model: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral') => {
-    const newSettings = { ...settings, selectedModel: model };
-    setSettings(newSettings);
-    storageUtils.saveSettings(newSettings);
-    aiService.updateSettings(newSettings, selectedLanguage);
-  };
+  const { isInstallable, isInstalled, installApp, dismissInstallPrompt } = usePWA();
 
-  const handleToggleSidebarFold = () => {
-    setSidebarFolded(!sidebarFolded);
-  };
+  // --- START: Refactored useEffect hooks ---
+  useEffect(() => {
+    // Update the AI service when settings or language change.
+    aiService.updateSettings(settings, selectedLanguage);
+  }, [settings, selectedLanguage]);
 
-  const handleOpenSettings = () => {
-    setSettingsOpen(true);
-  };
+  useEffect(() => {
+    // Save conversations to localStorage whenever they are modified.
+    storageUtils.saveConversations(conversations);
+  }, [conversations]);
 
-  const handleCloseSettings = () => {
-    setSettingsOpen(false);
-  };
+  useEffect(() => {
+    // Handle window resize for sidebar visibility.
+    const handleResize = () => {
+      setSidebarOpen(window.innerWidth >= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-  const currentConversation = conversations.find(c => c.id === currentConversationId);
-  const hasApiKey = settings.googleApiKey || settings.zhipuApiKey || settings.mistralApiKey;
+  useEffect(() => {
+    // Save the sidebar folded state to localStorage.
+    localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded));
+  }, [sidebarFolded]);
+  // --- END: Refactored useEffect hooks ---
 
-  const handleNewConversation = () => {
-    const newConversation: Conversation = {
-      id: generateId(),
-      title: selectedLanguage === 'en' ? 'New Chat' : 'नवीन चॅट',
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setConversations(prev => [newConversation, ...prev]);
-    setCurrentConversationId(newConversation.id);
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false);
-    }
-  };
+  const handleModelChange = (model: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral') => {
+    const newSettings = { ...settings, selectedModel: model };
+    setSettings(newSettings);
+    storageUtils.saveSettings(newSettings);
+    aiService.updateSettings(newSettings, selectedLanguage);
+  };
 
-  const handleNewPersonaConversation = (systemPrompt: string) => {
-    const newConversation: Conversation = {
-      id: generateId(),
-      title: generateConversationTitle(systemPrompt),
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isPersona: true,
-      systemPrompt: systemPrompt,
-    };
-    setConversations(prev => [newConversation, ...prev]);
-    setCurrentConversationId(newConversation.id);
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false);
-    }
-  };
+  const handleToggleSidebarFold = () => {
+    setSidebarFolded(!sidebarFolded);
+  };
 
-  const handleSelectConversation = (id: string) => {
-    setCurrentConversationId(id);
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false);
-    }
-  };
+  const handleOpenSettings = () => {
+    setSettingsOpen(true);
+  };
 
-  const handleDeleteConversation = (id: string) => {
-    setConversations(prev => prev.filter(c => c.id !== id));
-    if (currentConversationId === id) {
-      const remaining = conversations.filter(c => c.id !== id);
-      setCurrentConversationId(remaining.length > 0 ? remaining[0].id : null);
-    }
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false);
-    }
-  };
-  
-  const handleRenameConversation = (id: string, newTitle: string) => {
-    setConversations(prev =>
-      prev.map(c => (c.id === id ? { ...c, title: newTitle, updatedAt: new Date() } : c))
-    );
-  };
+  const handleCloseSettings = () => {
+    setSettingsOpen(false);
+  };
 
-  const handleTogglePinConversation = (id: string) => {
-    setConversations(prev =>
-      prev.map(c => (c.id === id ? { ...c, isPinned: !c.isPinned, updatedAt: new Date() } : c))
-    );
-  };
+  const currentConversation = conversations.find(c => c.id === currentConversationId);
+  const hasApiKey = settings.googleApiKey || settings.zhipuApiKey || settings.mistralApiKey;
 
-  const handleSaveSettings = (newSettings: APISettings) => {
-    setSettings(newSettings);
-    storageUtils.saveSettings(newSettings);
-    aiService.updateSettings(newSettings, selectedLanguage);
-    setSettingsOpen(false);
-  };
+  const handleNewConversation = () => {
+    const newConversation: Conversation = {
+      id: generateId(),
+      title: selectedLanguage === 'en' ? 'New Chat' : 'नवीन चॅट',
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    setConversations(prev => [newConversation, ...prev]);
+    setCurrentConversationId(newConversation.id);
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
 
-  const handleInstallApp = async () => {
-    const success = await installApp();
-    if (success) {
-      console.log('App installed successfully');
-    }
-  };
+  const handleNewPersonaConversation = (systemPrompt: string) => {
+    const newConversation: Conversation = {
+      id: generateId(),
+      title: generateConversationTitle(systemPrompt),
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isPersona: true,
+      systemPrompt: systemPrompt,
+    };
+    setConversations(prev => [newConversation, ...prev]);
+    setCurrentConversationId(newConversation.id);
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
 
-  const handleSendMessage = async (content: string) => {
-    if (!hasApiKey) {
-      alert(selectedLanguage === 'en' ? 'Please set your API key in the settings first.' : 'कृपया प्रथम सेटिंग्जमध्ये तुमची API की सेट करा.');
-      return;
-    }
+  const handleSelectConversation = (id: string) => {
+    setCurrentConversationId(id);
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
 
-    let conversationToUpdate = currentConversation;
-    let targetConversationId = currentConversationId;
+  const handleDeleteConversation = (id: string) => {
+    setConversations(prev => prev.filter(c => c.id !== id));
+    if (currentConversationId === id) {
+      const remaining = conversations.filter(c => c.id !== id);
+      setCurrentConversationId(remaining.length > 0 ? remaining[0].id : null);
+    }
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
+  
+  const handleRenameConversation = (id: string, newTitle: string) => {
+    setConversations(prev =>
+      prev.map(c => (c.id === id ? { ...c, title: newTitle, updatedAt: new Date() } : c))
+    );
+  };
 
-    if (!conversationToUpdate) {
-      const newConversation: Conversation = {
-        id: generateId(),
-        title: generateConversationTitle(content),
-        messages: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setConversations(prev => [newConversation, ...prev]);
-      conversationToUpdate = newConversation;
-      targetConversationId = newConversation.id;
-      setCurrentConversationId(newConversation.id);
-    }
+  const handleTogglePinConversation = (id: string) => {
+    setConversations(prev =>
+      prev.map(c => (c.id === id ? { ...c, isPinned: !c.isPinned, updatedAt: new Date() } : c))
+    );
+  };
 
-    const userMessage: Message = {
-      id: generateId(),
-      content,
-      role: 'user',
-      timestamp: new Date(),
-    };
+  const handleSaveSettings = (newSettings: APISettings) => {
+    setSettings(newSettings);
+    storageUtils.saveSettings(newSettings);
+    aiService.updateSettings(newSettings, selectedLanguage);
+    setSettingsOpen(false);
+  };
 
-    // Optimistic UI update
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === targetConversationId) {
-        const updatedTitle = conv.messages.length === 0 && !conv.isPersona ? generateConversationTitle(content) : conv.title;
-        return {
-          ...conv,
-          title: updatedTitle,
-          messages: [...conv.messages, userMessage],
-          updatedAt: new Date(),
-        };
-      }
-      return conv;
-    }));
+  const handleInstallApp = async () => {
+    const success = await installApp();
+    if (success) {
+      console.log('App installed successfully');
+    }
+  };
 
-    setIsLoading(true);
-    stopStreamingRef.current = false;
+  const handleSendMessage = async (content: string) => {
+    if (!hasApiKey) {
+      alert(selectedLanguage === 'en' ? 'Please set your API key in the settings first.' : 'कृपया प्रथम सेटिंग्जमध्ये तुमची API की सेट करा.');
+      return;
+    }
 
-    try {
-      const messagesForApi = [...conversationToUpdate.messages, userMessage].map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+    let conversationToUpdate = currentConversation;
+    let targetConversationId = currentConversationId;
 
-      const assistantMessage: Message = {
-        id: generateId(),
-        content: '',
-        role: 'assistant',
-        timestamp: new Date(),
-        model: settings.selectedModel,
-      };
+    if (!conversationToUpdate) {
+      const newConversation: Conversation = {
+        id: generateId(),
+        title: generateConversationTitle(content),
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setConversations(prev => [newConversation, ...prev]);
+      conversationToUpdate = newConversation;
+      targetConversationId = newConversation.id;
+      setCurrentConversationId(newConversation.id);
+    }
 
-      setStreamingMessage(assistantMessage);
-      let fullResponse = '';
-      for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage, conversationToUpdate.systemPrompt)) {
-        if (stopStreamingRef.current) {
-          break;
-        }
-        fullResponse += chunk;
-        setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
-      }
+    const userMessage: Message = {
+      id: generateId(),
+      content,
+      role: 'user',
+      timestamp: new Date(),
+    };
+    
+    const messagesForApi = [...conversationToUpdate.messages, userMessage].map(msg => ({
+      role: msg.role,
+      content: msg.content,
+    }));
 
-      const finalAssistantMessage: Message = {
-        ...assistantMessage,
-        content: fullResponse,
-      };
+    // Optimistic UI update: Add user message immediately
+    setConversations(prev => prev.map(conv => {
+      if (conv.id === targetConversationId) {
+        const updatedMessages = [...conv.messages, userMessage];
+        const updatedTitle = conv.messages.length === 0 && !conv.isPersona ? generateConversationTitle(content) : conv.title;
+        return {
+          ...conv,
+          title: updatedTitle,
+          messages: updatedMessages,
+          updatedAt: new Date(),
+        };
+      }
+      return conv;
+    }));
 
-      // **FIXED**: Update state based on the previous state, not a stale copy.
-      setConversations(prev => prev.map(conv => {
-        if (conv.id === targetConversationId) {
-          // The optimistic update already added the user message. We only add the assistant's final message.
-          const finalMessages = conv.messages.filter(m => m.id !== userMessage.id); // Ensure user message isn't duplicated in case of race conditions
-          return {
-            ...conv,
-            messages: [...finalMessages, userMessage, finalAssistantMessage],
-            updatedAt: new Date(),
-          };
-        }
-        return conv;
-      }));
+    setIsLoading(true);
+    stopStreamingRef.current = false;
+    try {
+      const assistantMessage: Message = {
+        id: generateId(),
+        content: '',
+        role: 'assistant',
+        timestamp: new Date(),
+        model: settings.selectedModel,
+      };
+      setStreamingMessage(assistantMessage);
 
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage: Message = {
-        id: generateId(),
-        content: selectedLanguage === 'en'
-          ? `Sorry, an error occurred. Please check your API key and network connection. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-          : `क्षमस्व, एक त्रुटी आली. कृपया तुमची API की आणि नेटवर्क कनेक्शन तपासा. त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`,
-        role: 'assistant',
-        timestamp: new Date(),
-      };
-      
-      // **FIXED**: Same logic for the error message.
-      setConversations(prev => prev.map(conv => {
-        if (conv.id === targetConversationId) {
-          return { ...conv, messages: [...conv.messages, errorMessage] };
-        }
-        return conv;
-      }));
+      let fullResponse = '';
+      for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage, conversationToUpdate.systemPrompt)) {
+        if (stopStreamingRef.current) {
+          break;
+        }
+        fullResponse += chunk;
+        setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
+      }
 
-    } finally {
-      setStreamingMessage(null);
-      setIsLoading(false);
-      stopStreamingRef.current = false;
-    }
-  };
+      const finalAssistantMessage: Message = {
+        ...assistantMessage,
+        content: fullResponse,
+      };
 
-  const handleEditMessage = (messageId: string, newContent: string) => {
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === currentConversationId) {
-        return {
-          ...conv,
-          messages: conv.messages.map(msg =>
-            msg.id === messageId ? { ...msg, content: newContent } : msg
-          ),
-          updatedAt: new Date(),
-        };
-      }
-      return conv;
-    }));
-  };
+      // **FIX:** Only add the *assistant's* final message. The user message is already in state.
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === targetConversationId) {
+          return {
+            ...conv,
+            messages: [...conv.messages, finalAssistantMessage],
+            updatedAt: new Date(),
+          };
+        }
+        return conv;
+      }));
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage: Message = {
+        id: generateId(),
+        content: selectedLanguage === 'en'
+          ? `Sorry, an error occurred. Please check your API key and network connection. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+          : `क्षमस्व, एक त्रुटी आली. कृपया तुमची API की आणि नेटवर्क कनेक्शन तपासा. त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`,
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+      // **FIX:** Only add the *error* message. The user message is already in state.
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === targetConversationId) {
+          return { ...conv, messages: [...conv.messages, errorMessage] };
+        }
+        return conv;
+      }));
+    } finally {
+      setStreamingMessage(null);
+      setIsLoading(false);
+      stopStreamingRef.current = false;
+    }
+  };
 
-  const handleRegenerateResponse = async (messageId: string) => {
-    if (!currentConversation) return;
+  const handleEditMessage = (messageId: string, newContent: string) => {
+    setConversations(prev => prev.map(conv => {
+      if (conv.id === currentConversationId) {
+        return {
+          ...conv,
+          messages: conv.messages.map(msg =>
+            msg.id === messageId ? { ...msg, content: newContent } : msg
+          ),
+          updatedAt: new Date(),
+        };
+      }
+      return conv;
+    }));
+  };
 
-    const messageIndex = currentConversation.messages.findIndex(m => m.id === messageId);
-    if (messageIndex <= 0) return;
+  const handleRegenerateResponse = async (messageId: string) => {
+    if (!currentConversation) return;
 
-    const messagesToResend = currentConversation.messages.slice(0, messageIndex);
-    const targetConversationId = currentConversation.id;
+    const messageIndex = currentConversation.messages.findIndex(m => m.id === messageId);
+    if (messageIndex <= 0) return;
 
-    // First, update the conversation to remove the old response.
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === targetConversationId) {
-        return {
-          ...conv,
-          messages: messagesToResend,
-          updatedAt: new Date(),
-        };
-      }
-      return conv;
-    }));
+    const updatedMessages = currentConversation.messages.slice(0, messageIndex);
+    const targetConversationId = currentConversation.id;
 
-    setIsLoading(true);
-    stopStreamingRef.current = false;
+    setConversations(prev => prev.map(conv => {
+      if (conv.id === currentConversationId) {
+        return {
+          ...conv,
+          messages: updatedMessages,
+          updatedAt: new Date(),
+        };
+      }
+      return conv;
+    }));
 
-    try {
-      const assistantMessage: Message = {
-        id: generateId(),
-        content: '',
-        role: 'assistant',
-        timestamp: new Date(),
-        model: settings.selectedModel,
-      };
-      setStreamingMessage(assistantMessage);
+    setIsLoading(true);
+    stopStreamingRef.current = false;
+    try {
+      const assistantMessage: Message = {
+        id: generateId(),
+        content: '',
+        role: 'assistant',
+        timestamp: new Date(),
+        model: settings.selectedModel,
+      };
+      setStreamingMessage(assistantMessage);
 
-      const messagesForApi = messagesToResend.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      const messagesForApi = updatedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
 
-      let fullResponse = '';
-      for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage, currentConversation.systemPrompt)) {
-        if (stopStreamingRef.current) {
-          break;
-        }
-        fullResponse += chunk;
-        setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
-      }
+      let fullResponse = '';
+      for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage, currentConversation.systemPrompt)) {
+        if (stopStreamingRef.current) {
+          break;
+        }
+        fullResponse += chunk;
+        setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
+      }
 
-      const finalAssistantMessage: Message = {
-        ...assistantMessage,
-        content: fullResponse,
-      };
+      const finalAssistantMessage: Message = {
+        ...assistantMessage,
+        content: fullResponse,
+      };
 
-      // **FIXED**: Base the final update on the most recent state (`conv.messages`)
-      setConversations(prev => prev.map(conv => {
-        if (conv.id === targetConversationId) {
-          return {
-            ...conv,
-            messages: [...conv.messages, finalAssistantMessage],
-            updatedAt: new Date(),
-          };
-        }
-        return conv;
-      }));
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === targetConversationId) {
+          return {
+            ...conv,
+            messages: [...updatedMessages, finalAssistantMessage],
+            updatedAt: new Date(),
+          };
+        }
+        return conv;
+      }));
+    } catch (error) {
+      console.error('Error regenerating response:', error);
+       const errorMessage: Message = {
+        id: generateId(),
+        content: selectedLanguage === 'en'
+          ? `Sorry, an error occurred while regenerating. Please check your API key. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+          : `क्षमस्व, प्रतिसाद पुन्हा तयार करताना त्रुटी आली. कृपया तुमची API की तपासा. त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`,
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === targetConversationId) {
+          return { ...conv, messages: [...updatedMessages, errorMessage] };
+        }
+        return conv;
+      }));
+    } finally {
+      setStreamingMessage(null);
+      setIsLoading(false);
+      stopStreamingRef.current = false;
+    }
+  };
 
-    } catch (error) {
-      console.error('Error regenerating response:', error);
-      const errorMessage: Message = {
-        id: generateId(),
-        content: selectedLanguage === 'en'
-          ? `Sorry, an error occurred while regenerating. Please check your API key. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-          : `क्षमस्व, प्रतिसाद पुन्हा तयार करताना त्रुटी आली. कृपया तुमची API की तपासा. त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`,
-        role: 'assistant',
-        timestamp: new Date(),
-      };
-      
-      // **FIXED**: Same correction for the catch block.
-      setConversations(prev => prev.map(conv => {
-        if (conv.id === targetConversationId) {
-          return { ...conv, messages: [...conv.messages, errorMessage] };
-        }
-        return conv;
-      }));
+  const handleStopGenerating = () => {
+    stopStreamingRef.current = true;
+  };
 
-    } finally {
-      setStreamingMessage(null);
-      setIsLoading(false);
-      stopStreamingRef.current = false;
-    }
-  };
+  const sortedConversations = useMemo(() => {
+    return [...conversations].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }, [conversations]);
 
-  const handleStopGenerating = () => {
-    stopStreamingRef.current = true;
-  };
+  return (
+    <div className="h-screen flex bg-[var(--color-bg)] text-[var(--color-text-primary)] relative">
+      {sidebarOpen && (
+        <Sidebar
+          conversations={sortedConversations}
+          currentConversationId={currentConversationId}
+          onNewConversation={handleNewConversation}
+          onNewPersonaConversation={handleNewPersonaConversation}
+          onSelectConversation={handleSelectConversation}
+          onDeleteConversation={handleDeleteConversation}
+          onRenameConversation={handleRenameConversation}
+          onTogglePinConversation={handleTogglePinConversation}
+          onOpenSettings={handleOpenSettings}
+          settings={settings}
+          onModelChange={handleModelChange}
+          onCloseSidebar={() => setSidebarOpen(false)}
+          isFolded={sidebarFolded}
+          onToggleFold={handleToggleSidebarFold}
+        />
+      )}
 
-  const sortedConversations = useMemo(() => {
-    return [...conversations].sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
-  }, [conversations]);
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-4 left-4 p-2.5 bg-[var(--color-card)] rounded-lg z-50 shadow-md hover:bg-[var(--color-border)] transition-colors"
+          title={selectedLanguage === 'en' ? 'Open sidebar' : 'साइडबार उघडा'}
+        >
+          <Menu className="w-6 h-6 text-[var(--color-text-secondary)]" />
+        </button>
+      )}
 
-  return (
-    <div className="h-screen flex bg-[var(--color-bg)] text-[var(--color-text-primary)] relative">
-      {sidebarOpen && (
-        <Sidebar
-          conversations={sortedConversations}
-          currentConversationId={currentConversationId}
-          onNewConversation={handleNewConversation}
-          onNewPersonaConversation={handleNewPersonaConversation}
-          onSelectConversation={handleSelectConversation}
-          onDeleteConversation={handleDeleteConversation}
-          onRenameConversation={handleRenameConversation}
-          onTogglePinConversation={handleTogglePinConversation}
-          onOpenSettings={handleOpenSettings}
-          settings={settings}
-          onModelChange={handleModelChange}
-          onCloseSidebar={() => setSidebarOpen(false)}
-          isFolded={sidebarFolded}
-          onToggleFold={handleToggleSidebarFold}
-        />
-      )}
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="fixed top-4 left-4 p-2.5 bg-[var(--color-card)] rounded-lg z-50 shadow-md hover:bg-[var(--color-border)] transition-colors"
-          title={selectedLanguage === 'en' ? 'Open sidebar' : 'साइडबार उघडा'}
-        >
-          <Menu className="w-6 h-6 text-[var(--color-text-secondary)]" />
-        </button>
-      )}
-      <ChatArea
-        conversation={currentConversation}
-        onSendMessage={handleSendMessage}
-        isLoading={isLoading}
-        streamingMessage={streamingMessage}
-        hasApiKey={hasApiKey}
-        model={settings.selectedModel}
-        onEditMessage={handleEditMessage}
-        onRegenerateResponse={handleRegenerateResponse}
-        onStopGenerating={handleStopGenerating}
-      />
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={handleCloseSettings}
-        settings={settings}
-        onSaveSettings={handleSaveSettings}
-        isSidebarFolded={sidebarFolded}
-        isSidebarOpen={sidebarOpen}
-      />
-      {isInstallable && !isInstalled && (
-        <InstallPrompt
-          onInstall={handleInstallApp}
-          onDismiss={dismissInstallPrompt}
-        />
-      )}
-    </div>
-  );
+      <ChatArea
+        conversation={currentConversation}
+        onSendMessage={handleSendMessage}
+        isLoading={isLoading}
+        streamingMessage={streamingMessage}
+        hasApiKey={hasApiKey}
+        model={settings.selectedModel}
+        onEditMessage={handleEditMessage}
+        onRegenerateResponse={handleRegenerateResponse}
+        onStopGenerating={handleStopGenerating}
+      />
+
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={handleCloseSettings}
+        settings={settings}
+        onSaveSettings={handleSaveSettings}
+        isSidebarFolded={sidebarFolded}
+        isSidebarOpen={sidebarOpen}
+      />
+
+      {isInstallable && !isInstalled && (
+        <InstallPrompt
+          onInstall={handleInstallApp}
+          onDismiss={dismissInstallPrompt}
+        />
+      )}
+    </div>
+  );
 }
 
 export default App;
