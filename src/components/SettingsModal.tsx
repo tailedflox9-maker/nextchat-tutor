@@ -189,13 +189,26 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
-          <button onClick={onClose} className="px-6 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors font-semibold">
-            {selectedLanguage === 'en' ? 'Cancel' : 'रद्द करा'}
-          </button>
-          <button onClick={handleSave} className="px-6 py-2 bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] rounded-lg hover:bg-[var(--color-accent-bg-hover)] transition-colors font-semibold">
-            {selectedLanguage === 'en' ? 'Save' : 'जतन करा'}
-          </button>
+        <div className="flex justify-between items-center gap-3 p-6 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
+          <div className="text-xs text-[var(--color-text-secondary)]">
+            Created by{' '}
+            <a 
+              href="https://tanmay-kalbande.github.io/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="font-semibold text-gray-400 hover:text-white transition-colors"
+            >
+              Tanmay Kalbande
+            </a>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="px-6 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors font-semibold">
+              {selectedLanguage === 'en' ? 'Cancel' : 'रद्द करा'}
+            </button>
+            <button onClick={handleSave} className="px-6 py-2 bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] rounded-lg hover:bg-[var(--color-accent-bg-hover)] transition-colors font-semibold">
+              {selectedLanguage === 'en' ? 'Save' : 'जतन करा'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
