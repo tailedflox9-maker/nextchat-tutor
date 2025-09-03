@@ -91,7 +91,7 @@ If the user asks for a quiz, create a quiz question or practice problem based on
     }
     try {
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemma-3-27b-it',
+        model: 'gemini-1.5-flash-latest',
         generationConfig: {
           temperature: 0.7,
           topP: 0.8,
