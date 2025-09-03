@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
-import { Bot, Sparkles, Send } from 'lucide-react';
+import { Bot, Sparkles } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { Message } from '../types';
@@ -31,16 +31,6 @@ const SkeletonMessageBubble = () => (
   </div>
 );
 
-const ConversationStarter = ({ text, onSend }: { text: string; onSend: (text: string) => void }) => (
-  <button
-    onClick={() => onSend(text)}
-    className="text-left w-full p-3 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg hover:border-gray-600 hover:bg-gray-800 transition-all flex items-center justify-between group"
-  >
-    <span className="text-sm">{text}</span>
-    <Send className="w-4 h-4 text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors" />
-  </button>
-);
-
 export function ChatArea({
   messages,
   onSendMessage,
@@ -58,21 +48,6 @@ export function ChatArea({
   const [userScrolled, setUserScrolled] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const lastScrollTop = useRef(0);
-
-  const starters = {
-    en: [
-      "Explain quantum computing in simple terms",
-      "Write a Python script for a simple web scraper",
-      "What are the best practices for React functional components?",
-      "Give me some ideas for a healthy breakfast",
-    ],
-    mr: [
-      "क्वांटम कॉम्प्युटिंग सोप्या भाषेत सांगा",
-      "एका सोप्या वेब स्क्रॅपरसाठी पायथन स्क्रिप्ट लिहा",
-      "रिॲक्ट फंक्शनल कंपोनेंट्ससाठी सर्वोत्तम पद्धती कोणत्या आहेत?",
-      "निरोगी नाश्त्यासाठी काही कल्पना द्या",
-    ],
-  };
 
   const scrollToBottom = (smooth = true) => {
     messagesEndRef.current?.scrollIntoView({
@@ -129,17 +104,8 @@ export function ChatArea({
             <h2 className="text-5xl font-bold text-[var(--color-text-primary)] mb-4">
               {selectedLanguage === 'en' ? 'AI Tutor' : 'एआय शिक्षक'}
             </h2>
-            <p className="text-[var(--color-text-secondary)] mb-6">
-              {selectedLanguage === 'en' ? 'How can I help you today?' : 'मी तुम्हाला आज कशी मदत करू शकतो?'}
-            </p>
-            {hasApiKey ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4 animate-fade-in-up">
-                {starters[selectedLanguage].map((text) => (
-                  <ConversationStarter key={text} text={text} onSend={onSendMessage} />
-                ))}
-              </div>
-            ) : (
-              <div className="bg-yellow-900/50 border border-yellow-700/50 rounded-lg p-4 text-left">
+            {!hasApiKey && (
+              <div className="bg-yellow-900/50 border border-yellow-700/50 rounded-lg p-4 text-left mt-6">
                 <p className="text-sm text-yellow-300">
                   <strong>{selectedLanguage === 'en' ? 'Setup Required:' : 'सेटअप आवश्यक:'}</strong>{' '}
                   {selectedLanguage === 'en'
