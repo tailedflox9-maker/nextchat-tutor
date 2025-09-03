@@ -293,7 +293,7 @@ export function Sidebar({
               <button
                   onClick={handleEnhancePrompt}
                   disabled={!personaPrompt.trim() || isEnhancing}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors text-white shadow-sm font-semibold disabled:bg-gray-700 disabled:cursor-not-allowed"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--color-card)] border border-[var(--color-border)] hover:bg-[var(--color-border)] rounded-lg transition-colors text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] shadow-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Wand2 className={`w-4 h-4 ${isEnhancing ? 'animate-spin' : ''}`} />
                   <span>{selectedLanguage === 'en' ? 'Enhance' : 'वाढवा'}</span>
@@ -301,7 +301,7 @@ export function Sidebar({
               <button
                 onClick={handleCreatePersona}
                 disabled={!personaPrompt.trim() || isEnhancing}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white shadow-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] rounded-lg transition-colors text-[var(--color-accent-text)] shadow-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>{selectedLanguage === 'en' ? 'Start Chat' : 'चॅट सुरू करा'}</span>
@@ -332,6 +332,22 @@ export function Sidebar({
           </button>
         </div>
       </div>
+      
+      {!isFolded && (
+        <div className="p-2 text-center border-t border-[var(--color-border)]">
+           <span className="text-xs text-gray-500">
+             Created by{' '}
+             <a
+               href="https://tanmay-kalbande.github.io/"
+               target="_blank"
+               rel="noopener noreferrer"
+               className="font-medium text-gray-400 hover:text-white transition-colors"
+             >
+               Tanmay Kalbande
+             </a>
+           </span>
+        </div>
+      )}
     </div>
   );
 }
