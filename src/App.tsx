@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { InstallPrompt } from './components/InstallPrompt';
+import { SettingsModal } from './components/SettingsModal';
 import { Conversation, Message, APISettings } from './types';
 import { aiService } from './services/aiService';
 import { storageUtils } from './utils/storage';
@@ -26,6 +27,7 @@ function App() {
   const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const [sidebarFolded, setSidebarFolded] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const stopStreamingRef = useRef(false);
 
   const { isInstallable, isInstalled, installApp, dismissInstallPrompt } = usePWA();
@@ -71,6 +73,14 @@ function App() {
 
   const handleToggleSidebarFold = () => {
     setSidebarFolded(!sidebarFolded);
+  };
+
+  const handleOpenSettings = () => {
+    setSettingsOpen(true);
+  };
+
+  const handleCloseSettings = () => {
+    setSettingsOpen(false);
   };
 
   const currentConversation = conversations.find(c => c.id === currentConversationId);
@@ -125,6 +135,7 @@ function App() {
     setSettings(newSettings);
     storageUtils.saveSettings(newSettings);
     aiService.updateSettings(newSettings, selectedLanguage);
+    setSettingsOpen(false);
   };
 
   const handleInstallApp = async () => {
@@ -368,7 +379,7 @@ function App() {
           onDeleteConversation={handleDeleteConversation}
           onRenameConversation={handleRenameConversation}
           onTogglePinConversation={handleTogglePinConversation}
-          onSaveSettings={handleSaveSettings}
+          onOpenSettings={handleOpenSettings}
           settings={settings}
           onModelChange={handleModelChange}
           onCloseSidebar={() => setSidebarOpen(false)}
@@ -397,6 +408,15 @@ function App() {
         onEditMessage={handleEditMessage}
         onRegenerateResponse={handleRegenerateResponse}
         onStopGenerating={handleStopGenerating}
+      />
+
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={handleCloseSettings}
+        settings={settings}
+        onSaveSettings={handleSaveSettings}
+        isSidebarFolded={sidebarFolded}
+        isSidebarOpen={sidebarOpen}
       />
 
       {isInstallable && !isInstalled && (
