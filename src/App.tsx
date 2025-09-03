@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
-import { SettingsModal } from './components/SettingsModal';
 import { InstallPrompt } from './components/InstallPrompt';
 import { Conversation, Message, APISettings } from './types';
 import { aiService } from './services/aiService';
@@ -22,7 +21,6 @@ function App() {
   const { selectedLanguage } = useContext(LanguageContext);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<APISettings>(defaultSettings);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
@@ -127,7 +125,6 @@ function App() {
     setSettings(newSettings);
     storageUtils.saveSettings(newSettings);
     aiService.updateSettings(newSettings, selectedLanguage);
-    setIsSettingsOpen(false);
   };
 
   const handleInstallApp = async () => {
@@ -138,13 +135,17 @@ function App() {
   };
 
   const handleSendMessage = async (content: string) => {
+    // The ChatInput is disabled if there's no API key, so this check is a safeguard.
+    // The user will need to manually open settings from the sidebar.
     if (!hasApiKey) {
-      setIsSettingsOpen(true);
+      alert(selectedLanguage === 'en' ? 'Please set your API key in the settings first.' : 'कृपया प्रथम सेटिंग्जमध्ये तुमची API की सेट करा.');
       return;
     }
 
+    let conversationToUpdate = currentConversation;
     let targetConversationId = currentConversationId;
-    if (!targetConversationId) {
+
+    if (!conversationToUpdate) {
       const newConversation: Conversation = {
         id: generateId(),
         title: generateConversationTitle(content),
@@ -153,8 +154,9 @@ function App() {
         updatedAt: new Date(),
       };
       setConversations(prev => [newConversation, ...prev]);
+      conversationToUpdate = newConversation;
       targetConversationId = newConversation.id;
-      setCurrentConversationId(targetConversationId);
+      setCurrentConversationId(newConversation.id);
     }
 
     const userMessage: Message = {
@@ -163,6 +165,12 @@ function App() {
       role: 'user',
       timestamp: new Date(),
     };
+    
+    // This is the list of messages we'll send to the API
+    const messagesForApi = [...conversationToUpdate.messages, userMessage].map(msg => ({
+      role: msg.role,
+      content: msg.content,
+    }));
 
     setConversations(prev => prev.map(conv => {
       if (conv.id === targetConversationId) {
@@ -190,15 +198,8 @@ function App() {
       };
       setStreamingMessage(assistantMessage);
 
-      const conversationHistory = conversations.find(c => c.id === targetConversationId)?.messages || [];
-
-      const messages = conversationHistory.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
-
       let fullResponse = '';
-      for await (const chunk of aiService.generateStreamingResponse(messages, selectedLanguage)) {
+      for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage)) {
         if (stopStreamingRef.current) {
           break;
         }
@@ -213,6 +214,7 @@ function App() {
 
       setConversations(prev => prev.map(conv => {
         if (conv.id === targetConversationId) {
+          // Now add the final assistant message to the history
           return {
             ...conv,
             messages: [...conv.messages, finalAssistantMessage],
@@ -221,7 +223,6 @@ function App() {
         }
         return conv;
       }));
-      setStreamingMessage(null);
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
@@ -238,8 +239,8 @@ function App() {
         }
         return conv;
       }));
-      setStreamingMessage(null);
     } finally {
+      setStreamingMessage(null);
       setIsLoading(false);
       stopStreamingRef.current = false;
     }
@@ -292,13 +293,13 @@ function App() {
       };
       setStreamingMessage(assistantMessage);
 
-      const messages = updatedMessages.map(msg => ({
+      const messagesForApi = updatedMessages.map(msg => ({
         role: msg.role,
         content: msg.content,
       }));
 
       let fullResponse = '';
-      for await (const chunk of aiService.generateStreamingResponse(messages, selectedLanguage)) {
+      for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage)) {
         if (stopStreamingRef.current) {
           break;
         }
@@ -312,7 +313,7 @@ function App() {
       };
 
       setConversations(prev => prev.map(conv => {
-        if (conv.id === currentConversationId) {
+        if (conv.id === targetConversationId) {
           return {
             ...conv,
             messages: [...updatedMessages, finalAssistantMessage],
@@ -321,14 +322,13 @@ function App() {
         }
         return conv;
       }));
-      setStreamingMessage(null);
     } catch (error) {
       console.error('Error regenerating response:', error);
        const errorMessage: Message = {
         id: generateId(),
         content: selectedLanguage === 'en'
-          ? `Sorry, an error occurred. Please check your API key and network connection. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-          : `क्षमस्व, एक त्रुटी आली. कृपया तुमची API की आणि नेटवर्क कनेक्शन तपासा. त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`,
+          ? `Sorry, an error occurred while regenerating. Please check your API key. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+          : `क्षमस्व, प्रतिसाद पुन्हा तयार करताना त्रुटी आली. कृपया तुमची API की तपासा. त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`,
         role: 'assistant',
         timestamp: new Date(),
       };
@@ -338,8 +338,8 @@ function App() {
         }
         return conv;
       }));
-      setStreamingMessage(null);
     } finally {
+      setStreamingMessage(null);
       setIsLoading(false);
       stopStreamingRef.current = false;
     }
@@ -359,15 +359,6 @@ function App() {
 
   return (
     <div className="h-screen flex bg-[var(--color-bg)] text-[var(--color-text-primary)] relative">
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        settings={settings}
-        onSaveSettings={handleSaveSettings}
-        isSidebarFolded={sidebarFolded}
-        isSidebarOpen={sidebarOpen}
-      />
-      
       {sidebarOpen && (
         <Sidebar
           conversations={sortedConversations}
@@ -377,7 +368,7 @@ function App() {
           onDeleteConversation={handleDeleteConversation}
           onRenameConversation={handleRenameConversation}
           onTogglePinConversation={handleTogglePinConversation}
-          onOpenSettings={() => setIsSettingsOpen(true)}
+          onSaveSettings={handleSaveSettings}
           settings={settings}
           onModelChange={handleModelChange}
           onCloseSidebar={() => setSidebarOpen(false)}
