@@ -228,7 +228,7 @@ export function ChatArea({
             {/* Messages container with stable layout */}
             <div className="space-y-6">
               {allMessages.map((message) => (
-                <div key={message.id} className="will-change-transform">
+                <div key={message.id} className="message-wrapper">
                   <MessageBubble
                     message={message}
                     isStreaming={streamingMessage?.id === message.id}
@@ -258,7 +258,7 @@ export function ChatArea({
         selectedLanguage={selectedLanguage}
       />
 
-      <div className="p-4 bg-[var(--color-bg)] border-t border-[var(--color-border)]">
+      <div className="p-4 bg-[var(--color-bg)]">
         <div className="max-w-3xl mx-auto">
           <ChatInput
             onSendMessage={onSendMessage}
