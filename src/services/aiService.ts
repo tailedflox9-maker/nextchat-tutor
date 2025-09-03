@@ -91,7 +91,7 @@ If the user asks for a quiz, create a quiz question or practice problem based on
     }
     try {
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemma-3-27b-it', // <-- REVERTED TO THE ORIGINAL MODEL
+        model: 'gemma-3-27b-it',
         generationConfig: {
           temperature: 0.7,
           topP: 0.8,
@@ -253,6 +253,16 @@ If the user asks for a quiz, create a quiz question or practice problem based on
         : "मिस्ट्रल एआय योग्यरित्या कॉन्फिगर केलेले नाही.";
       return;
     }
+
+    // MISTRAL FIX: Prepend system prompt to the first user message for better instruction following.
+    const mistralMessages = [...messages];
+    if (mistralMessages.length > 0 && mistralMessages[0].role === 'user') {
+      mistralMessages[0] = {
+        ...mistralMessages[0],
+        content: `${systemPrompt}\n\n---\n\n${mistralMessages[0].content}`,
+      };
+    }
+
     try {
       const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
         method: 'POST',
@@ -262,10 +272,7 @@ If the user asks for a quiz, create a quiz question or practice problem based on
         },
         body: JSON.stringify({
           model: model === 'small' ? 'mistral-small-latest' : 'codestral-latest',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...messages,
-          ],
+          messages: mistralMessages, // Use the modified messages array
           stream: true,
           temperature: 0.7,
           max_tokens: 2048,
