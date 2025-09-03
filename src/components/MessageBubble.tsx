@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useContext, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -22,6 +22,107 @@ const modelNames = {
   'mistral-codestral': { en: "Cody", mr: "कोडी" },
 };
 
+// Memoized code block component to prevent unnecessary re-renders
+const CodeBlock = React.memo(({ 
+  language, 
+  children, 
+  selectedLanguage 
+}: { 
+  language: string; 
+  children: string; 
+  selectedLanguage: 'en' | 'mr'; 
+}) => {
+  const [copied, setCopied] = useState(false);
+  const codeContent = String(children).replace(/\n$/, '');
+  
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(codeContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [codeContent]);
+
+  return (
+    <div className="relative my-2 text-sm will-change-transform">
+      <div className="absolute right-2 top-2 flex items-center gap-2 z-10">
+        <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">
+          {language}
+        </span>
+        <button
+          onClick={handleCopy}
+          className="p-1.5 bg-gray-800 rounded hover:bg-gray-700 text-gray-300 transition-colors"
+          title={selectedLanguage === 'en' ? 'Copy code' : 'कोड कॉपी करा'}
+        >
+          {copied ? (
+            <Check className="w-3 h-3" />
+          ) : (
+            <Copy className="w-3 h-3" />
+          )}
+        </button>
+      </div>
+      <SyntaxHighlighter
+        style={vscDarkPlus}
+        language={language}
+        PreTag="div"
+        className="!bg-[#121212] rounded-md !p-4 !pt-8"
+      >
+        {codeContent}
+      </SyntaxHighlighter>
+    </div>
+  );
+});
+
+// Memoized streaming indicator to prevent layout shifts
+const StreamingIndicator = React.memo(() => (
+  <span className="inline-flex items-center ml-1">
+    <span className="w-2 h-2 bg-[var(--color-text-placeholder)] rounded-full animate-pulse" />
+  </span>
+));
+
+// Memoized action buttons to prevent unnecessary re-renders
+const ActionButtons = React.memo(({ 
+  isUser,
+  onRegenerate,
+  onEdit,
+  onCopy,
+  copied,
+  selectedLanguage 
+}: {
+  isUser: boolean;
+  onRegenerate?: () => void;
+  onEdit: () => void;
+  onCopy: () => void;
+  copied: boolean;
+  selectedLanguage: 'en' | 'mr';
+}) => (
+  <div className="absolute -bottom-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200">
+    <div className="flex gap-1 p-1 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg shadow-sm">
+      {!isUser && onRegenerate && (
+        <button
+          onClick={onRegenerate}
+          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)]"
+          title={selectedLanguage === 'en' ? 'Regenerate response' : 'प्रतिसाद पुन्हा तयार करा'}
+        >
+          <RefreshCcw className="w-4 h-4" />
+        </button>
+      )}
+      <button
+        onClick={onEdit}
+        className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)]"
+        title={selectedLanguage === 'en' ? 'Edit message' : 'संदेश संपादित करा'}
+      >
+        <Edit2 className="w-4 h-4" />
+      </button>
+      <button
+        onClick={onCopy}
+        className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)]"
+        title={selectedLanguage === 'en' ? 'Copy message' : 'संदेश कॉपी करा'}
+      >
+        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+      </button>
+    </div>
+  </div>
+));
+
 export function MessageBubble({
   message,
   isStreaming = false,
@@ -36,8 +137,11 @@ export function MessageBubble({
   const [isEditing, setIsEditing] = useState(message.isEditing || false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const copyTimeoutRef = useRef<NodeJS.Timeout>();
-  const displayModel = isUser ? undefined : (
-    modelNames[message.model || model || 'google'][selectedLanguage]
+
+  // Memoize display model to prevent unnecessary recalculations
+  const displayModel = useMemo(() => 
+    isUser ? undefined : modelNames[message.model || model || 'google'][selectedLanguage],
+    [isUser, message.model, model, selectedLanguage]
   );
 
   const handleCopy = useCallback(async () => {
@@ -76,10 +180,12 @@ export function MessageBubble({
     }
   }, [message.id, onRegenerateResponse]);
 
+  // Auto-resize textarea
   useEffect(() => {
     if (isEditing && textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      const textarea = textareaRef.current;
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
     }
   }, [isEditing, editContent]);
 
@@ -91,6 +197,7 @@ export function MessageBubble({
     }
   }, [handleSaveEdit, handleCancelEdit]);
 
+  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (copyTimeoutRef.current) {
@@ -99,23 +206,64 @@ export function MessageBubble({
     };
   }, []);
 
+  // Memoize markdown components to prevent re-creation on every render
+  const markdownComponents = useMemo(() => ({
+    code({ node, inline, className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || '');
+      if (!inline && match) {
+        return (
+          <CodeBlock
+            language={match[1]}
+            children={String(children)}
+            selectedLanguage={selectedLanguage}
+          />
+        );
+      } else {
+        return (
+          <code className="bg-[var(--color-bg)] px-1.5 py-0.5 rounded text-sm" {...props}>
+            {children}
+          </code>
+        );
+      }
+    },
+    table({ children }: any) {
+      return (
+        <div className="overflow-x-auto my-4">
+          <table className="border-collapse border border-[var(--color-border)] w-full">
+            {children}
+          </table>
+        </div>
+      );
+    },
+    th({ children }: any) {
+      return (
+        <th className="border border-[var(--color-border)] p-2 bg-[var(--color-sidebar)] font-semibold">
+          {children}
+        </th>
+      );
+    },
+    td({ children }: any) {
+      return <td className="border border-[var(--color-border)] p-2">{children}</td>;
+    },
+  }), [selectedLanguage]);
+
   return (
     <div
-      className={`flex gap-4 mb-6 ${isUser ? 'justify-end' : 'justify-start'} group transition-all duration-300 ease-out`}
+      className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'} group transition-all duration-200 ease-out will-change-transform`}
     >
       {!isUser && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-card)]">
           <Sparkles className="w-4 h-4 text-[var(--color-text-secondary)]" />
         </div>
       )}
-      <div
-        className="relative max-w-[85%] bg-[var(--color-card)] p-4 rounded-xl"
-      >
+      
+      <div className="relative max-w-[85%] bg-[var(--color-card)] p-4 rounded-xl min-h-[3rem] flex flex-col">
         {!isUser && displayModel && (
           <div className="text-xs text-[var(--color-text-secondary)] mb-2 font-medium tracking-wide">
             {displayModel}
           </div>
         )}
+        
         {isEditing ? (
           <div className="space-y-3">
             <textarea
@@ -150,115 +298,29 @@ export function MessageBubble({
             </p>
           </div>
         ) : (
-          <div className={`prose prose-invert prose-base max-w-none leading-relaxed ${isUser ? 'font-semibold' : 'font-normal'}`}>
+          <div className={`prose prose-invert prose-base max-w-none leading-relaxed flex-1 ${isUser ? 'font-semibold' : 'font-normal'}`}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              components={{
-                code({ node, inline, className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || '');
-                  if (!inline && match) {
-                    const [copied, setCopied] = useState(false);
-                    const codeContent = String(children).replace(/\n$/, '');
-                    const handleCopy = () => {
-                      navigator.clipboard.writeText(codeContent);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    };
-                    return (
-                      <div className="relative my-2 text-sm">
-                        <div className="absolute right-2 top-2 flex items-center gap-2">
-                           <span className="text-xs text-gray-400">{match[1]}</span>
-                           <button
-                              onClick={handleCopy}
-                              className="p-1.5 bg-gray-800 rounded hover:bg-gray-700 text-gray-300"
-                              title={selectedLanguage === 'en' ? 'Copy code' : 'कोड कॉपी करा'}
-                           >
-                              {copied ? (
-                                <Check className="w-3 h-3" />
-                              ) : (
-                                <Copy className="w-3 h-3" />
-                              )}
-                           </button>
-                        </div>
-                        <SyntaxHighlighter
-                          style={vscDarkPlus}
-                          language={match[1]}
-                          PreTag="div"
-                          className="!bg-[#121212] rounded-md !p-4"
-                          {...props}
-                        >
-                          {codeContent}
-                        </SyntaxHighlighter>
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <code className="bg-[var(--color-bg)] px-1.5 py-0.5 rounded text-sm" {...props}>
-                        {children}
-                      </code>
-                    );
-                  }
-                },
-                table({ children }) {
-                  return (
-                    <div className="overflow-x-auto my-4">
-                      <table className="border-collapse border border-[var(--color-border)] w-full">
-                        {children}
-                      </table>
-                    </div>
-                  );
-                },
-                th({ children }) {
-                  return (
-                    <th className="border border-[var(--color-border)] p-2 bg-[var(--color-sidebar)] font-semibold">
-                      {children}
-                    </th>
-                  );
-                },
-                td({ children }) {
-                  return <td className="border border-[var(--color-border)] p-2">{children}</td>;
-                },
-              }}
+              components={markdownComponents}
             >
               {message.content}
             </ReactMarkdown>
-            {isStreaming && (
-              <span className="inline-block w-2 h-2 bg-[var(--color-text-placeholder)] rounded-full animate-pulse ml-1"></span>
-            )}
+            {isStreaming && <StreamingIndicator />}
           </div>
         )}
-        {!isEditing && !isStreaming && message.content.length > 0 && (
-          <div className={`absolute -bottom-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity`}>
-             <div className="flex gap-1 p-1 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg">
-               {!isUser && onRegenerateResponse && (
-                 <button
-                   onClick={handleRegenerate}
-                   className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded"
-                   title={selectedLanguage === 'en' ? 'Regenerate response' : 'प्रतिसाद पुन्हा तयार करा'}
-                 >
-                   <RefreshCcw className="w-4 h-4" />
-                 </button>
-               )}
-               {onEditMessage && (
-                 <button
-                   onClick={handleEdit}
-                   className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded"
-                   title={selectedLanguage === 'en' ? 'Edit message' : 'संदेश संपादित करा'}
-                 >
-                   <Edit2 className="w-4 h-4" />
-                 </button>
-               )}
-               <button
-                 onClick={handleCopy}
-                 className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded"
-                 title={selectedLanguage === 'en' ? 'Copy message' : 'संदेश कॉपी करा'}
-               >
-                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-               </button>
-             </div>
-          </div>
+        
+        {!isEditing && !isStreaming && message.content.length > 0 && onEditMessage && (
+          <ActionButtons
+            isUser={isUser}
+            onRegenerate={onRegenerateResponse ? handleRegenerate : undefined}
+            onEdit={handleEdit}
+            onCopy={handleCopy}
+            copied={copied}
+            selectedLanguage={selectedLanguage}
+          />
         )}
       </div>
+      
       {isUser && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-card)]">
           <Smile className="w-4 h-4 text-[var(--color-text-secondary)]" />
