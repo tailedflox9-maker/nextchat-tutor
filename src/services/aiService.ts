@@ -99,7 +99,7 @@ class AIService {
     }
     try {
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemma-2-27b-it',
         systemInstruction: systemPrompt,
       });
       const history = messages.slice(0, -1).map(msg => ({
@@ -334,7 +334,7 @@ class AIService {
     
     Here is the prompt to enhance: "${prompt}"`;
     
-    // --- START: New logic to prioritize Mistral for enhancement ---
+    // Prioritize Mistral for enhancement due to its creative capabilities
     if (this.settings?.mistralApiKey) {
       try {
         const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
@@ -354,19 +354,17 @@ class AIService {
         return data.choices[0].message.content;
       } catch (error) {
         console.error("Mistral enhancement failed, falling back to Google:", error);
-        // Fallback to Google if Mistral fails
       }
     }
 
-    // --- Fallback to Google Gemini ---
+    // Fallback to Google Gemma 2
     if (this.googleAI) {
-      const model = this.googleAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = this.googleAI.getGenerativeModel({ model: 'gemma-3-12b-it' });
       const result = await model.generateContent(metaPrompt);
       return result.response.text();
     }
     
     throw new Error("No API key available to enhance prompt. Please configure a Mistral or Google API key.");
-    // --- END: New logic ---
   }
 }
 
