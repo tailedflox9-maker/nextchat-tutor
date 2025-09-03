@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { SettingsModal } from './components/SettingsModal';
@@ -110,6 +110,18 @@ function App() {
       setSidebarOpen(false);
     }
   };
+  
+  const handleRenameConversation = (id: string, newTitle: string) => {
+    setConversations(prev =>
+      prev.map(c => (c.id === id ? { ...c, title: newTitle, updatedAt: new Date() } : c))
+    );
+  };
+
+  const handleTogglePinConversation = (id: string) => {
+    setConversations(prev =>
+      prev.map(c => (c.id === id ? { ...c, isPinned: !c.isPinned, updatedAt: new Date() } : c))
+    );
+  };
 
   const handleSaveSettings = (newSettings: APISettings) => {
     setSettings(newSettings);
@@ -178,9 +190,7 @@ function App() {
       };
       setStreamingMessage(assistantMessage);
 
-      const conversationHistory = currentConversation
-        ? [...currentConversation.messages, userMessage]
-        : [userMessage];
+      const conversationHistory = conversations.find(c => c.id === targetConversationId)?.messages || [];
 
       const messages = conversationHistory.map(msg => ({
         role: msg.role,
@@ -214,6 +224,20 @@ function App() {
       setStreamingMessage(null);
     } catch (error) {
       console.error('Error sending message:', error);
+      const errorMessage: Message = {
+        id: generateId(),
+        content: selectedLanguage === 'en'
+          ? `Sorry, an error occurred. Please check your API key and network connection. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+          : `क्षमस्व, एक त्रुटी आली. कृपया तुमची API की आणि नेटवर्क कनेक्शन तपासा. त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`,
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === targetConversationId) {
+          return { ...conv, messages: [...conv.messages, errorMessage] };
+        }
+        return conv;
+      }));
       setStreamingMessage(null);
     } finally {
       setIsLoading(false);
@@ -243,6 +267,7 @@ function App() {
     if (messageIndex <= 0) return;
 
     const updatedMessages = currentConversation.messages.slice(0, messageIndex);
+    const targetConversationId = currentConversation.id;
 
     setConversations(prev => prev.map(conv => {
       if (conv.id === currentConversationId) {
@@ -299,6 +324,20 @@ function App() {
       setStreamingMessage(null);
     } catch (error) {
       console.error('Error regenerating response:', error);
+       const errorMessage: Message = {
+        id: generateId(),
+        content: selectedLanguage === 'en'
+          ? `Sorry, an error occurred. Please check your API key and network connection. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+          : `क्षमस्व, एक त्रुटी आली. कृपया तुमची API की आणि नेटवर्क कनेक्शन तपासा. त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`,
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === targetConversationId) {
+          return { ...conv, messages: [...updatedMessages, errorMessage] };
+        }
+        return conv;
+      }));
       setStreamingMessage(null);
     } finally {
       setIsLoading(false);
@@ -310,6 +349,14 @@ function App() {
     stopStreamingRef.current = true;
   };
 
+  const sortedConversations = useMemo(() => {
+    return [...conversations].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }, [conversations]);
+
   return (
     <div className="h-screen flex bg-[var(--color-bg)] text-[var(--color-text-primary)] relative">
       <SettingsModal
@@ -318,15 +365,18 @@ function App() {
         settings={settings}
         onSaveSettings={handleSaveSettings}
         isSidebarFolded={sidebarFolded}
+        isSidebarOpen={sidebarOpen}
       />
       
       {sidebarOpen && (
         <Sidebar
-          conversations={conversations}
+          conversations={sortedConversations}
           currentConversationId={currentConversationId}
           onNewConversation={handleNewConversation}
           onSelectConversation={handleSelectConversation}
           onDeleteConversation={handleDeleteConversation}
+          onRenameConversation={handleRenameConversation}
+          onTogglePinConversation={handleTogglePinConversation}
           onOpenSettings={() => setIsSettingsOpen(true)}
           settings={settings}
           onModelChange={handleModelChange}
