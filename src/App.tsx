@@ -117,6 +117,23 @@ function App() {
     }
   };
 
+  const handleNewPersonaConversation = (systemPrompt: string) => {
+    const newConversation: Conversation = {
+      id: generateId(),
+      title: generateConversationTitle(systemPrompt),
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isPersona: true,
+      systemPrompt: systemPrompt,
+    };
+    setConversations(prev => [newConversation, ...prev]);
+    setCurrentConversationId(newConversation.id);
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
+
   const handleSelectConversation = (id: string) => {
     setCurrentConversationId(id);
     if (window.innerWidth < 768) {
@@ -162,8 +179,6 @@ function App() {
   };
 
   const handleSendMessage = async (content: string) => {
-    // The ChatInput is disabled if there's no API key, so this check is a safeguard.
-    // The user will need to manually open settings from the sidebar.
     if (!hasApiKey) {
       alert(selectedLanguage === 'en' ? 'Please set your API key in the settings first.' : 'कृपया प्रथम सेटिंग्जमध्ये तुमची API की सेट करा.');
       return;
@@ -193,7 +208,6 @@ function App() {
       timestamp: new Date(),
     };
     
-    // This is the list of messages we'll send to the API
     const messagesForApi = [...conversationToUpdate.messages, userMessage].map(msg => ({
       role: msg.role,
       content: msg.content,
@@ -202,7 +216,7 @@ function App() {
     setConversations(prev => prev.map(conv => {
       if (conv.id === targetConversationId) {
         const updatedMessages = [...conv.messages, userMessage];
-        const updatedTitle = conv.messages.length === 0 ? generateConversationTitle(content) : conv.title;
+        const updatedTitle = conv.messages.length === 0 && !conv.isPersona ? generateConversationTitle(content) : conv.title;
         return {
           ...conv,
           title: updatedTitle,
@@ -226,7 +240,7 @@ function App() {
       setStreamingMessage(assistantMessage);
 
       let fullResponse = '';
-      for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage)) {
+      for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage, conversationToUpdate.systemPrompt)) {
         if (stopStreamingRef.current) {
           break;
         }
@@ -241,10 +255,9 @@ function App() {
 
       setConversations(prev => prev.map(conv => {
         if (conv.id === targetConversationId) {
-          // Now add the final assistant message to the history
           return {
             ...conv,
-            messages: [...conv.messages, finalAssistantMessage],
+            messages: [...conv.messages, userMessage, finalAssistantMessage],
             updatedAt: new Date(),
           };
         }
@@ -262,7 +275,7 @@ function App() {
       };
       setConversations(prev => prev.map(conv => {
         if (conv.id === targetConversationId) {
-          return { ...conv, messages: [...conv.messages, errorMessage] };
+          return { ...conv, messages: [...conv.messages, userMessage, errorMessage] };
         }
         return conv;
       }));
@@ -326,7 +339,7 @@ function App() {
       }));
 
       let fullResponse = '';
-      for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage)) {
+      for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage, currentConversation.systemPrompt)) {
         if (stopStreamingRef.current) {
           break;
         }
@@ -391,6 +404,7 @@ function App() {
           conversations={sortedConversations}
           currentConversationId={currentConversationId}
           onNewConversation={handleNewConversation}
+          onNewPersonaConversation={handleNewPersonaConversation}
           onSelectConversation={handleSelectConversation}
           onDeleteConversation={handleDeleteConversation}
           onRenameConversation={handleRenameConversation}
@@ -415,7 +429,7 @@ function App() {
       )}
 
       <ChatArea
-        messages={currentConversation?.messages || []}
+        conversation={currentConversation}
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
         streamingMessage={streamingMessage}
