@@ -19,7 +19,7 @@ const apiInfo = {
   mistral: { name: 'Mistral', url: 'https://console.mistral.ai/api-keys' },
 };
 
-export function SettingsModal({ isOpen, onClose, settings, onSaveSettings, isSidebarFolded, isSidebarOpen }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: SettingsModalProps) {
   const { selectedLanguage, setSelectedLanguage } = React.useContext(LanguageContext);
   const [localSettings, setLocalSettings] = React.useState<APISettings>(settings);
   const [visibleApis, setVisibleApis] = React.useState<Record<string, boolean>>({});
@@ -89,112 +89,115 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings, isSid
     fileInputRef.current?.click();
   };
 
-  const sidebarWidth = isSidebarOpen ? (isSidebarFolded ? '4rem' : '16rem') : '0rem';
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
-    <>
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
+      {/* Backdrop */}
       <div
-        onClick={onClose}
-        className={`fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={handleBackdropClick}
       />
-      <div
-        className={`fixed top-0 bottom-0 z-40 w-full max-w-xs bg-[var(--color-sidebar)] border-r border-[var(--color-border)] shadow-2xl transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        style={{ left: sidebarWidth }}
-      >
-        <div className="flex flex-col h-full">
-          <div className="p-6 border-b border-[var(--color-border)]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Settings className="w-5 h-5" />
-                <h2 className="text-xl font-bold">
-                  {selectedLanguage === 'en' ? 'Settings' : 'सेटिंग्ज'}
-                </h2>
-              </div>
-              <button
-                onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-card)] transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      
+      {/* Modal */}
+      <div className="relative w-full max-w-md bg-[var(--color-sidebar)] border border-[var(--color-border)] rounded-lg shadow-2xl max-h-[80vh] flex flex-col animate-fade-in-up">
+        {/* Header */}
+        <div className="p-6 border-b border-[var(--color-border)]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Settings className="w-5 h-5" />
+              <h2 className="text-xl font-bold">
+                {selectedLanguage === 'en' ? 'Settings' : 'सेटिंग्ज'}
+              </h2>
             </div>
-          </div>
-
-          <div className="p-6 overflow-y-auto flex-1 space-y-10">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
-                <Languages /> {selectedLanguage === 'en' ? 'General' : 'सामान्य'}
-              </h3>
-              <fieldset>
-                <legend className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-                  {selectedLanguage === 'en' ? 'Language' : 'भाषा'}
-                </legend>
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => handleLanguageChange('en')} className={`p-3 border rounded-lg transition-colors text-sm font-semibold ${selectedLanguage === 'en' ? 'bg-[var(--color-card)] border-[var(--color-border)]' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)]'}`}>English</button>
-                  <button onClick={() => handleLanguageChange('mr')} className={`p-3 border rounded-lg transition-colors text-sm font-semibold ${selectedLanguage === 'mr' ? 'bg-[var(--color-card)] border-[var(--color-border)]' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)]'}`}>मराठी</button>
-                </div>
-              </fieldset>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
-                <Shield /> {selectedLanguage === 'en' ? 'API Keys' : 'API की'}
-              </h3>
-              {Object.keys(apiInfo).map(key => {
-                const id = key as keyof typeof apiInfo;
-                const apiKeyId = `${id}ApiKey` as keyof APISettings;
-                return (
-                  <div key={id}>
-                    <label htmlFor={apiKeyId} className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center gap-1.5">
-                      {apiInfo[id].name} API Key
-                      <a href={apiInfo[id].url} target="_blank" rel="noopener noreferrer" title={`Get ${apiInfo[id].name} key`}>
-                        <HelpCircle className="w-3.5 h-3.5 text-[var(--color-text-placeholder)] hover:text-[var(--color-text-primary)]" />
-                      </a>
-                    </label>
-                    <div className="relative">
-                      <Key className="w-4 h-4 text-[var(--color-text-secondary)] absolute top-1/2 left-3 -translate-y-1/2" />
-                      <input
-                        id={apiKeyId}
-                        type={visibleApis[id] ? 'text' : 'password'}
-                        value={localSettings[apiKeyId]}
-                        onChange={(e) => setLocalSettings(prev => ({ ...prev, [apiKeyId]: e.target.value }))}
-                        placeholder={`${apiInfo[id].name} key`}
-                        className="w-full pl-9 pr-10 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-card)] focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors"
-                      />
-                      <button type="button" onClick={() => toggleApiVisibility(id)} className="absolute top-1/2 right-3 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
-                        {visibleApis[id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
-                <Database /> {selectedLanguage === 'en' ? 'Data Management' : 'डेटा व्यवस्थापन'}
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={handleExportData} className="flex items-center justify-center gap-2 p-3 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-card)] transition-colors"> <Download className="w-4 h-4"/> {selectedLanguage === 'en' ? 'Export' : 'निर्यात'}</button>
-                <button onClick={triggerFileInput} className="flex items-center justify-center gap-2 p-3 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-card)] transition-colors"> <Upload className="w-4 h-4"/> {selectedLanguage === 'en' ? 'Import' : 'आयात'}</button>
-              </div>
-              <input type="file" ref={fileInputRef} onChange={handleImportData} accept=".json" className="hidden"/>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 p-6 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
-            <button onClick={onClose} className="px-6 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors font-semibold">
-              {selectedLanguage === 'en' ? 'Cancel' : 'रद्द करा'}
-            </button>
-            <button onClick={handleSave} className="px-6 py-2 bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] rounded-lg hover:bg-[var(--color-accent-bg-hover)] transition-colors font-semibold">
-              {selectedLanguage === 'en' ? 'Save' : 'जतन करा'}
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-card)] transition-colors"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto flex-1 space-y-8">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+              <Languages /> {selectedLanguage === 'en' ? 'General' : 'सामान्य'}
+            </h3>
+            <fieldset>
+              <legend className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                {selectedLanguage === 'en' ? 'Language' : 'भाषा'}
+              </legend>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => handleLanguageChange('en')} className={`p-3 border rounded-lg transition-colors text-sm font-semibold ${selectedLanguage === 'en' ? 'bg-[var(--color-card)] border-[var(--color-border)]' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)]'}`}>English</button>
+                <button onClick={() => handleLanguageChange('mr')} className={`p-3 border rounded-lg transition-colors text-sm font-semibold ${selectedLanguage === 'mr' ? 'bg-[var(--color-card)] border-[var(--color-border)]' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)]'}`}>मराठी</button>
+              </div>
+            </fieldset>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+              <Shield /> {selectedLanguage === 'en' ? 'API Keys' : 'API की'}
+            </h3>
+            {Object.keys(apiInfo).map(key => {
+              const id = key as keyof typeof apiInfo;
+              const apiKeyId = `${id}ApiKey` as keyof APISettings;
+              return (
+                <div key={id}>
+                  <label htmlFor={apiKeyId} className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center gap-1.5">
+                    {apiInfo[id].name} API Key
+                    <a href={apiInfo[id].url} target="_blank" rel="noopener noreferrer" title={`Get ${apiInfo[id].name} key`}>
+                      <HelpCircle className="w-3.5 h-3.5 text-[var(--color-text-placeholder)] hover:text-[var(--color-text-primary)]" />
+                    </a>
+                  </label>
+                  <div className="relative">
+                    <Key className="w-4 h-4 text-[var(--color-text-secondary)] absolute top-1/2 left-3 -translate-y-1/2" />
+                    <input
+                      id={apiKeyId}
+                      type={visibleApis[id] ? 'text' : 'password'}
+                      value={localSettings[apiKeyId]}
+                      onChange={(e) => setLocalSettings(prev => ({ ...prev, [apiKeyId]: e.target.value }))}
+                      placeholder={`${apiInfo[id].name} key`}
+                      className="w-full pl-9 pr-10 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-card)] focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors"
+                    />
+                    <button type="button" onClick={() => toggleApiVisibility(id)} className="absolute top-1/2 right-3 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+                      {visibleApis[id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+              <Database /> {selectedLanguage === 'en' ? 'Data Management' : 'डेटा व्यवस्थापन'}
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={handleExportData} className="flex items-center justify-center gap-2 p-3 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-card)] transition-colors"> <Download className="w-4 h-4"/> {selectedLanguage === 'en' ? 'Export' : 'निर्यात'}</button>
+              <button onClick={triggerFileInput} className="flex items-center justify-center gap-2 p-3 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-card)] transition-colors"> <Upload className="w-4 h-4"/> {selectedLanguage === 'en' ? 'Import' : 'आयात'}</button>
+            </div>
+            <input type="file" ref={fileInputRef} onChange={handleImportData} accept=".json" className="hidden"/>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 p-6 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
+          <button onClick={onClose} className="px-6 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors font-semibold">
+            {selectedLanguage === 'en' ? 'Cancel' : 'रद्द करा'}
+          </button>
+          <button onClick={handleSave} className="px-6 py-2 bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] rounded-lg hover:bg-[var(--color-accent-bg-hover)] transition-colors font-semibold">
+            {selectedLanguage === 'en' ? 'Save' : 'जतन करा'}
+          </button>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
