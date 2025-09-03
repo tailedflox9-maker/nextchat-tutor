@@ -1,6 +1,19 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { APISettings } from '../types';
 
+const defaultSystemPromptEN = `You are a helpful AI tutor. Provide clear, educational responses that help users learn effectively.
+Use markdown formatting with headings, lists, and code blocks to structure your answers.
+If the user asks for examples, provide practical examples.
+If the user asks for explanations, break down complex concepts into simple terms.
+If the user asks for a quiz, create a quiz question or practice problem based on the topic.`;
+
+const defaultSystemPromptMR = `तुम्ही एक उपयुक्त एआय शिक्षक आहात. वापरकर्त्यांना प्रभावीपणे शिकण्यास मदत करण्यासाठी स्पष्ट, शैक्षणिक प्रतिसाद द्या.
+आपले उत्तर संरचित करण्यासाठी मार्कडाउन स्वरूपण, शीर्षके, यादी आणि कोड ब्लॉक वापरा.
+जर वापरकर्त्याने उदाहरणे मागितली, तर व्यावहारिक उदाहरणे द्या.
+जर वापरकर्त्याने स्पष्टीकरण मागितले, तर जटिल संकल्पना साध्या भाषेत समजावून सांगा.
+जर वापरकर्त्याने क्विझ मागितली, तर विषयावर आधारित क्विझ प्रश्न किंवा सराव समस्या तयार करा.
+सर्व प्रतिसाद मराठीत द्या.`;
+
 class AIService {
   private googleAI: GoogleGenerativeAI | null = null;
   private zhipuAI: any = null;
@@ -34,6 +47,7 @@ class AIService {
   async *generateStreamingResponse(
     messages: Array<{ role: string; content: string }>,
     language: 'en' | 'mr',
+    conversationSystemPrompt?: string,
     onUpdate?: (content: string) => void
   ): AsyncGenerator<string, void, unknown> {
     if (!this.settings) {
@@ -47,19 +61,8 @@ class AIService {
       yield "Error: No messages provided to generate a response.";
       return;
     }
-
-    const systemPrompt = language === 'en'
-      ? `You are a helpful AI tutor. Provide clear, educational responses that help users learn effectively.
-Use markdown formatting with headings, lists, and code blocks to structure your answers.
-If the user asks for examples, provide practical examples.
-If the user asks for explanations, break down complex concepts into simple terms.
-If the user asks for a quiz, create a quiz question or practice problem based on the topic.`
-      : `तुम्ही एक उपयुक्त एआय शिक्षक आहात. वापरकर्त्यांना प्रभावीपणे शिकण्यास मदत करण्यासाठी स्पष्ट, शैक्षणिक प्रतिसाद द्या.
-आपले उत्तर संरचित करण्यासाठी मार्कडाउन स्वरूपण, शीर्षके, यादी आणि कोड ब्लॉक वापरा.
-जर वापरकर्त्याने उदाहरणे मागितली, तर व्यावहारिक उदाहरणे द्या.
-जर वापरकर्त्याने स्पष्टीकरण मागितले, तर जटिल संकल्पना साध्या भाषेत समजावून सांगा.
-जर वापरकर्त्याने क्विझ मागितली, तर विषयावर आधारित क्विझ प्रश्न किंवा सराव समस्या तयार करा.
-सर्व प्रतिसाद मराठीत द्या.`;
+    
+    const systemPrompt = conversationSystemPrompt || (language === 'en' ? defaultSystemPromptEN : defaultSystemPromptMR);
 
     try {
       if (this.settings.selectedModel === 'google' && this.googleAI) {
