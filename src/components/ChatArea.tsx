@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState, useContext } from 'react';
-import { Sparkles, Info } from 'lucide-react';
+import React, { useEffect, useRef, useState, useContext, useCallback, useMemo } from 'react';
+import { Sparkles, Info, ArrowDown } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { Conversation, Message } from '../types';
@@ -17,19 +17,58 @@ interface ChatAreaProps {
   onStopGenerating: () => void;
 }
 
-const SkeletonMessageBubble = () => (
+const SkeletonMessageBubble = React.memo(() => (
   <div className="flex gap-4 mb-6 justify-start animate-pulse">
     <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-card)]">
       <Sparkles className="w-4 h-4 text-[var(--color-text-secondary)]" />
     </div>
     <div className="relative max-w-[85%] bg-[var(--color-card)] p-4 rounded-xl w-full">
       <div className="space-y-2">
-        <div className="h-4 bg-[var(--color-border)] rounded w-3/4"></div>
-        <div className="h-4 bg-[var(--color-border)] rounded w-1/2"></div>
+        <div className="h-4 bg-[var(--color-border)] rounded w-3/4 animate-shimmer"></div>
+        <div className="h-4 bg-[var(--color-border)] rounded w-1/2 animate-shimmer"></div>
       </div>
     </div>
   </div>
-);
+));
+
+const PersonaInfo = React.memo(({ conversation, selectedLanguage }: { 
+  conversation: Conversation; 
+  selectedLanguage: 'en' | 'mr'; 
+}) => (
+  <div className="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl mb-6 animate-fade-in-up will-change-transform">
+    <div className="flex items-center gap-2 mb-2">
+      <Info className="w-4 h-4 text-blue-400 flex-shrink-0" />
+      <h4 className="font-semibold text-sm text-[var(--color-text-primary)]">
+        {selectedLanguage === 'en' ? 'Active Persona' : 'सक्रिय Persona'}
+      </h4>
+    </div>
+    <p className="text-sm text-[var(--color-text-secondary)] italic leading-relaxed max-h-20 overflow-y-auto">
+      "{conversation.systemPrompt}"
+    </p>
+  </div>
+));
+
+const ScrollToBottomButton = React.memo(({ 
+  show, 
+  onClick, 
+  selectedLanguage 
+}: { 
+  show: boolean; 
+  onClick: () => void; 
+  selectedLanguage: 'en' | 'mr'; 
+}) => (
+  <button
+    onClick={onClick}
+    className={`fixed bottom-24 right-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300 z-10 hover:scale-105 will-change-transform ${
+      show
+        ? 'opacity-100 translate-y-0 pointer-events-auto'
+        : 'opacity-0 translate-y-4 pointer-events-none'
+    }`}
+    aria-label={selectedLanguage === 'en' ? 'Scroll to bottom' : 'खाली स्क्रोल करा'}
+  >
+    <ArrowDown className="w-5 h-5 text-[var(--color-text-secondary)]" />
+  </button>
+));
 
 export function ChatArea({
   conversation,
@@ -48,42 +87,79 @@ export function ChatArea({
   const [userScrolled, setUserScrolled] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const lastScrollTop = useRef(0);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout>();
+  const isScrollingRef = useRef(false);
 
-  const messages = conversation?.messages || [];
+  // Memoize messages to prevent unnecessary re-renders
+  const messages = useMemo(() => conversation?.messages || [], [conversation?.messages]);
+  
+  // Memoize all messages including streaming
+  const allMessages = useMemo(() => 
+    streamingMessage ? [...messages, streamingMessage] : messages, 
+    [messages, streamingMessage]
+  );
 
-  const scrollToBottom = (smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: smooth ? 'smooth' : 'auto',
-      block: 'end',
+  // Optimized scroll to bottom with requestAnimationFrame
+  const scrollToBottom = useCallback((smooth = true) => {
+    if (isScrollingRef.current) return;
+    
+    isScrollingRef.current = true;
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'end',
+      });
+      
+      setTimeout(() => {
+        isScrollingRef.current = false;
+      }, 100);
     });
-  };
+  }, []);
 
-  const handleScroll = () => {
-    if (!messagesContainerRef.current) return;
+  // Throttled scroll handler
+  const handleScroll = useCallback(() => {
+    if (!messagesContainerRef.current || isScrollingRef.current) return;
 
-    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-    const scrollingUp = scrollTop < lastScrollTop.current && scrollTop > 0;
-
-    if (scrollingUp && !isAtBottom) {
-      setUserScrolled(true);
-      setShowScrollToBottom(true);
+    // Clear existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
     }
 
-    if (isAtBottom) {
-      setUserScrolled(false);
-      setShowScrollToBottom(false);
-    }
+    // Throttle scroll handling
+    scrollTimeoutRef.current = setTimeout(() => {
+      if (!messagesContainerRef.current) return;
+      
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100; // Increased threshold
+      const scrollingUp = scrollTop < lastScrollTop.current && scrollTop > 0;
 
-    lastScrollTop.current = scrollTop;
-  };
+      if (scrollingUp && !isAtBottom) {
+        setUserScrolled(true);
+        setShowScrollToBottom(true);
+      }
 
+      if (isAtBottom) {
+        setUserScrolled(false);
+        setShowScrollToBottom(false);
+      }
+
+      lastScrollTop.current = scrollTop;
+    }, 50); // Throttle to 50ms
+  }, []);
+
+  // Auto-scroll when new messages arrive or content changes
   useEffect(() => {
-    if (!userScrolled) {
-      scrollToBottom();
+    if (!userScrolled && !isScrollingRef.current) {
+      // Use requestAnimationFrame for smoother scrolling
+      const scrollTimeout = setTimeout(() => {
+        scrollToBottom(false); // Don't animate for streaming content
+      }, 50);
+      
+      return () => clearTimeout(scrollTimeout);
     }
-  }, [messages.length, streamingMessage?.content, userScrolled]);
+  }, [allMessages.length, streamingMessage?.content, userScrolled, scrollToBottom]);
 
+  // Reset scroll state when conversation changes
   useEffect(() => {
     if (messages.length === 0) {
       setUserScrolled(false);
@@ -91,11 +167,25 @@ export function ChatArea({
     }
   }, [messages.length]);
 
-  const allMessages = streamingMessage ? [...messages, streamingMessage] : messages;
+  // Cleanup timeouts
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handle scroll to bottom button click
+  const handleScrollToBottomClick = useCallback(() => {
+    setUserScrolled(false);
+    scrollToBottom(true);
+  }, [scrollToBottom]);
+
   const showSkeleton = isLoading && allMessages.length > 0 && !streamingMessage;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[var(--color-bg)] relative">
+    <div className="flex-1 flex flex-col h-full bg-[var(--color-bg)] relative will-change-transform">
       {allMessages.length === 0 && !isLoading && !conversation ? (
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center max-w-md w-full">
@@ -118,65 +208,57 @@ export function ChatArea({
           </div>
         </div>
       ) : (
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto" onScroll={handleScroll}>
+        <div 
+          ref={messagesContainerRef} 
+          className="flex-1 overflow-y-auto scroll-smooth" 
+          onScroll={handleScroll}
+          style={{ 
+            scrollbarWidth: 'thin',
+            WebkitOverflowScrolling: 'touch' // Better iOS scrolling
+          }}
+        >
           <div className="max-w-3xl mx-auto px-4 py-6 pt-8">
             {conversation?.isPersona && conversation.systemPrompt && (
-              <div className="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl mb-6 animate-fade-in-up">
-                <div className="flex items-center gap-2 mb-2">
-                  <Info className="w-4 h-4 text-blue-400" />
-                  <h4 className="font-semibold text-sm text-[var(--color-text-primary)]">
-                    {selectedLanguage === 'en' ? 'Active Persona' : 'सक्रिय Persona'}
-                  </h4>
-                </div>
-                <p className="text-sm text-[var(--color-text-secondary)] italic leading-relaxed max-h-20 overflow-y-auto">
-                  "{conversation.systemPrompt}"
-                </p>
-              </div>
-            )}
-            {allMessages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                isStreaming={streamingMessage?.id === message.id}
-                model={model}
-                onEditMessage={onEditMessage}
-                onRegenerateResponse={onRegenerateResponse}
+              <PersonaInfo 
+                conversation={conversation} 
+                selectedLanguage={selectedLanguage} 
               />
-            ))}
-            {showSkeleton && <SkeletonMessageBubble />}
+            )}
+            
+            {/* Messages container with stable layout */}
+            <div className="space-y-6">
+              {allMessages.map((message) => (
+                <div key={message.id} className="will-change-transform">
+                  <MessageBubble
+                    message={message}
+                    isStreaming={streamingMessage?.id === message.id}
+                    model={model}
+                    onEditMessage={onEditMessage}
+                    onRegenerateResponse={onRegenerateResponse}
+                  />
+                </div>
+              ))}
+              
+              {showSkeleton && (
+                <div className="will-change-transform">
+                  <SkeletonMessageBubble />
+                </div>
+              )}
+            </div>
           </div>
-          <div ref={messagesEndRef} />
+          
+          {/* Stable scroll anchor */}
+          <div ref={messagesEndRef} className="h-1" />
         </div>
       )}
 
-      <button
-        onClick={() => {
-          setUserScrolled(false);
-          scrollToBottom();
-        }}
-        className={`absolute bottom-24 right-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-300 z-10 hover:scale-105 ${
-          showScrollToBottom
-            ? 'opacity-100 translate-y-0'
-            : 'opacity-0 translate-y-4 pointer-events-none'
-        }`}
-        aria-label={selectedLanguage === 'en' ? 'Scroll to bottom' : 'खाली स्क्रोल करा'}
-      >
-        <svg
-          className="w-4 h-4 text-[var(--color-text-secondary)]"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 14l-7 7m0 0l-7-7m7 7V3"
-          />
-        </svg>
-      </button>
+      <ScrollToBottomButton
+        show={showScrollToBottom}
+        onClick={handleScrollToBottomClick}
+        selectedLanguage={selectedLanguage}
+      />
 
-      <div className="p-4 bg-[var(--color-bg)]">
+      <div className="p-4 bg-[var(--color-bg)] border-t border-[var(--color-border)]">
         <div className="max-w-3xl mx-auto">
           <ChatInput
             onSendMessage={onSendMessage}
