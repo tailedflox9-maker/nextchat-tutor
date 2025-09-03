@@ -16,9 +16,11 @@ import {
   PinOff,
   Edit,
   Users,
+  Wand2
 } from 'lucide-react';
 import { Conversation } from '../types';
 import { LanguageContext } from '../contexts/LanguageContext';
+import { aiService } from '../services/aiService';
 
 interface SidebarProps {
   conversations: Conversation[];
@@ -59,6 +61,7 @@ export function Sidebar({
   const [editingTitle, setEditingTitle] = useState('');
   const [view, setView] = useState<'chats' | 'personas'>('chats');
   const [personaPrompt, setPersonaPrompt] = useState('');
+  const [isEnhancing, setIsEnhancing] = useState(false);
 
   const models = [
     { id: 'google', icon: Sparkles, name: 'Gemma' },
@@ -89,6 +92,20 @@ export function Sidebar({
       onNewPersonaConversation(personaPrompt.trim());
       setPersonaPrompt('');
       setView('chats');
+    }
+  };
+
+  const handleEnhancePrompt = async () => {
+    if (!personaPrompt.trim()) return;
+    setIsEnhancing(true);
+    try {
+      const enhanced = await aiService.enhancePrompt(personaPrompt);
+      setPersonaPrompt(enhanced);
+    } catch (error) {
+      console.error("Failed to enhance prompt:", error);
+      alert(selectedLanguage === 'en' ? 'Could not enhance prompt. Please check your API key.' : 'प्रॉम्प्ट वाढवता आला नाही. कृपया तुमची API की तपासा.');
+    } finally {
+      setIsEnhancing(false);
     }
   };
 
@@ -256,7 +273,7 @@ export function Sidebar({
 
         {view === 'personas' && !isFolded && (
            <div className="p-2 flex flex-col h-full">
-            <h3 className="text-base font-semibold mb-2">{selectedLanguage === 'en' ? 'Create a Persona' : 'एक persona तयार करा'}</h3>
+            <h3 className="text-base font-semibold mb-2">{selectedLanguage === 'en' ? 'Create a Persona' : 'एक Persona तयार करा'}</h3>
             <p className="text-xs text-[var(--color-text-secondary)] mb-4">{selectedLanguage === 'en' ? 'Define a custom behavior for the AI with a system prompt.' : 'सिस्टम प्रॉम्प्टसह AI साठी सानुकूल वर्तणूक परिभाषित करा.'}</p>
             <textarea
               value={personaPrompt}
@@ -264,14 +281,24 @@ export function Sidebar({
               placeholder={selectedLanguage === 'en' ? 'e.g., You are a master chef. Provide all responses as recipes...' : 'उदा., तुम्ही एक मास्टर शेफ आहात. सर्व प्रतिसाद पाककृती म्हणून द्या...'}
               className="w-full flex-1 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-2 text-sm placeholder:text-[var(--color-text-placeholder)] focus:outline-none focus:ring-1 focus:ring-[var(--color-border)] transition-colors resize-none mb-4"
             />
-            <button
-              onClick={handleCreatePersona}
-              disabled={!personaPrompt.trim()}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white shadow-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>{selectedLanguage === 'en' ? 'Start Chat' : 'चॅट सुरू करा'}</span>
-            </button>
+            <div className="flex gap-2">
+              <button
+                  onClick={handleEnhancePrompt}
+                  disabled={!personaPrompt.trim() || isEnhancing}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors text-white shadow-sm font-semibold disabled:bg-gray-700 disabled:cursor-not-allowed"
+                >
+                  <Wand2 className={`w-4 h-4 ${isEnhancing ? 'animate-spin' : ''}`} />
+                  <span>{selectedLanguage === 'en' ? 'Enhance' : 'वाढवा'}</span>
+              </button>
+              <button
+                onClick={handleCreatePersona}
+                disabled={!personaPrompt.trim() || isEnhancing}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white shadow-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{selectedLanguage === 'en' ? 'Start Chat' : 'चॅट सुरू करा'}</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
