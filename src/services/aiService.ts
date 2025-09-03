@@ -98,14 +98,14 @@ class AIService {
       return;
     }
     try {
-      // FIX: Switched to a reliable and capable model. `gemini-1.5-flash-latest` is a great choice.
+      // RESTORED: Using the exact model you requested.
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemini-1.5-flash-latest',
+        model: 'gemma-3-27b-it',
         systemInstruction: systemPrompt,
       });
 
-      // FIX: The Google API requires roles to alternate strictly. This merges consecutive messages 
-      // from the same role to prevent errors, which can happen after editing a message.
+      // FIX: This part is crucial. The Google API requires roles to alternate strictly.
+      // This code merges consecutive messages from the same role to prevent errors.
       const mergedMessages: Array<{ role: string; content: string }> = [];
       if (messages.length > 0) {
         let currentMessage = { ...messages[0] };
@@ -369,10 +369,9 @@ class AIService {
       }
     }
 
-    // Fallback to Google Gemini
+    // Fallback to Google Gemma 2 (as in your original file)
     if (this.googleAI) {
-      // FIX: Use a consistent, reliable model
-      const model = this.googleAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+      const model = this.googleAI.getGenerativeModel({ model: 'gemma-2-9b-it' });
       const result = await model.generateContent(metaPrompt);
       return result.response.text();
     }
