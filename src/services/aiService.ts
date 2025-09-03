@@ -261,29 +261,73 @@ class AIService {
   }
 
   async enhancePrompt(prompt: string): Promise<string> {
+    // Check if we have any API key configured
     if (!this.settings.googleApiKey && !this.settings.zhipuApiKey && !this.settings.mistralApiKey) {
       throw new Error('No API key configured');
     }
+
+    // Find the first available API key and use that model
+    let enhancedPrompt = '';
+    const enhanceSystemPrompt = this.selectedLanguage === 'en' 
+      ? 'You are a prompt engineering expert. Your task is to enhance and improve system prompts for AI assistants.'
+      : 'तुम्ही prompt engineering तज्ञ आहात. तुमचे कार्य AI सहाय्यकांसाठी system prompts सुधारणे आणि वाढवणे आहे.';
 
     const enhanceMessages: MessageForAPI[] = [
       {
         role: 'user',
         content: this.selectedLanguage === 'en' 
-          ? `Please enhance and improve this system prompt to make it more detailed, specific, and effective for an AI assistant. The prompt should be clear, comprehensive, and actionable. Here's the original prompt: "${prompt}"`
-          : `कृपया या सिस्टम प्रॉम्प्टला अधिक तपशीलवार, विशिष्ट आणि AI सहाय्यकासाठी अधिक प्रभावी बनवण्यासाठी सुधारा. प्रॉम्प्ट स्पष्ट, सर्वसमावेशक आणि कार्यक्षम असावा. मूळ प्रॉम्प्ट हा आहे: "${prompt}"`
+          ? `Please enhance and improve this system prompt to make it more detailed, specific, and effective for an AI assistant. The prompt should be clear, comprehensive, and actionable. Only return the enhanced prompt, nothing else. Here's the original prompt: "${prompt}"`
+          : `कृपया या system prompt ला अधिक तपशीलवार, विशिष्ट आणि AI सहाय्यकासाठी अधिक प्रभावी बनवण्यासाठी सुधारा. prompt स्पष्ट, सर्वसमावेशक आणि कार्यक्षम असावा. फक्त सुधारलेला prompt परत करा, आणि काहीही नाही. मूळ prompt हा आहे: "${prompt}"`
       }
     ];
 
-    let enhancedPrompt = '';
-    
     try {
-      for await (const chunk of this.generateStreamingResponse(enhanceMessages, this.selectedLanguage)) {
-        enhancedPrompt += chunk;
+      // Try to use the current selected model first
+      if (this.canUseModel(this.settings.selectedModel)) {
+        for await (const chunk of this.generateStreamingResponse(enhanceMessages, this.selectedLanguage, enhanceSystemPrompt)) {
+          enhancedPrompt += chunk;
+        }
+      } else {
+        // Fall back to any available model
+        let modelToUse: 'google' | 'zhipu' | 'mistral-small' = 'google';
+        if (this.settings.googleApiKey) {
+          modelToUse = 'google';
+        } else if (this.settings.zhipuApiKey) {
+          modelToUse = 'zhipu';
+        } else if (this.settings.mistralApiKey) {
+          modelToUse = 'mistral-small';
+        }
+
+        // Temporarily switch model for enhancement
+        const originalModel = this.settings.selectedModel;
+        this.settings.selectedModel = modelToUse;
+        
+        for await (const chunk of this.generateStreamingResponse(enhanceMessages, this.selectedLanguage, enhanceSystemPrompt)) {
+          enhancedPrompt += chunk;
+        }
+        
+        // Restore original model
+        this.settings.selectedModel = originalModel;
       }
+      
       return enhancedPrompt.trim();
     } catch (error) {
       console.error('Error enhancing prompt:', error);
-      throw error;
+      throw new Error(`Failed to enhance prompt: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private canUseModel(model: string): boolean {
+    switch (model) {
+      case 'google':
+        return !!this.settings.googleApiKey;
+      case 'zhipu':
+        return !!this.settings.zhipuApiKey;
+      case 'mistral-small':
+      case 'mistral-codestral':
+        return !!this.settings.mistralApiKey;
+      default:
+        return false;
     }
   }
 }
