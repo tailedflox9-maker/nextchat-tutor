@@ -1,3 +1,7 @@
+/* ==========================================================================
+   FILE: src/index.css
+   ========================================================================== */
+
 @import url('https://fonts.googleapis.com/css2?family=Biryani:wght@200;300;400;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Marathi:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -6,6 +10,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   Base Layer & Theming
+   ========================================================================== */
 @layer base {
   ::selection {
     background-color: #3B82F6; /* A nice blue accent for selection */
@@ -33,7 +40,12 @@
     font-family: var(--font-english);
     overflow-x: hidden;
   }
-  /* Enhanced Marathi/Devanagari font styling with Biryani */
+  
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* --- Marathi Font Styling --- */
   body[data-lang="mr"],
   .marathi-text,
   [lang="mr"] {
@@ -48,32 +60,32 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  /* Font weight mapping to maintain consistency with English */
+
   .marathi-text.font-medium,
   [lang="mr"].font-medium,
   body[data-lang="mr"] .font-medium {
-    font-weight: 700 !important; /* Increased for better visibility */
+    font-weight: 700 !important;
   }
   .marathi-text.font-semibold,
   [lang="mr"].font-semibold,
   body[data-lang="mr"] .font-semibold {
-    font-weight: 800 !important; /* Increased for better visibility */
+    font-weight: 800 !important;
   }
   .marathi-text.font-bold,
   [lang="mr"].font-bold,
   body[data-lang="mr"] .font-bold {
-    font-weight: 900 !important; /* Maximum bold weight */
+    font-weight: 900 !important;
   }
-  /* Force bold for specific UI elements in Marathi */
+
   body[data-lang="mr"] button,
   body[data-lang="mr"] .btn,
   [lang="mr"] button,
   [lang="mr"] .btn {
     font-family: var(--font-marathi) !important;
-    font-weight: 700 !important; /* Bold weight for buttons */
-    text-shadow: 0 0 1px rgba(0, 0, 0, 0.5); /* Add text shadow for better visibility */
+    font-weight: 700 !important;
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
   }
-  /* Specific adjustments for different UI elements in Marathi */
+
   body[data-lang="mr"] h1,
   body[data-lang="mr"] h2,
   body[data-lang="mr"] h3,
@@ -87,11 +99,11 @@
   [lang="mr"] h5,
   [lang="mr"] h6 {
     font-family: var(--font-marathi) !important;
-    font-weight: 800 !important; /* Bold headings */
+    font-weight: 800 !important;
     line-height: 1.5 !important;
-    text-shadow: 0 0 1px rgba(0, 0, 0, 0.3); /* Add text shadow for better visibility */
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
   }
-  /* Input and form elements in Marathi */
+
   body[data-lang="mr"] input,
   body[data-lang="mr"] textarea,
   body[data-lang="mr"] select,
@@ -99,10 +111,10 @@
   [lang="mr"] textarea,
   [lang="mr"] select {
     font-family: var(--font-marathi) !important;
-    font-weight: 600 !important; /* Medium weight for inputs */
+    font-weight: 600 !important;
     font-size: 1.05em !important;
   }
-  /* Placeholder text in Marathi */
+
   body[data-lang="mr"] input::placeholder,
   body[data-lang="mr"] textarea::placeholder,
   [lang="mr"] input::placeholder,
@@ -111,7 +123,7 @@
     font-weight: 600 !important;
     opacity: 0.7;
   }
-  /* Force bold for navigation and important text in Marathi */
+
   body[data-lang="mr"] .sidebar button,
   body[data-lang="mr"] .sidebar .font-semibold,
   [lang="mr"] .sidebar button,
@@ -119,29 +131,80 @@
     font-weight: 800 !important;
     text-shadow: 0 0 1px rgba(255, 255, 255, 0.2);
   }
-  html {
-    scroll-behavior: smooth;
-  }
 }
+
+/* ==========================================================================
+   Components Layer
+   ========================================================================== */
 @layer components {
-  /* Enhanced Scrollbars */
+  /* --- Global Scrollbar Styling --- */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--color-sidebar);
-    border-radius: 3px;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-border);
+    background-color: var(--color-border);
     border-radius: 3px;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease-in-out;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-text-secondary);
+    background-color: var(--color-text-secondary);
   }
-  /* Smooth sidebar transitions */
+  /* For Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  /* --- Keyframe Animations --- */
+  @keyframes shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: calc(200px + 100%) 0; }
+  }
+  @keyframes messageSlideIn {
+    from { opacity: 0; transform: translateY(15px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes pulse {
+    50% { opacity: 0.5; }
+  }
+  @keyframes typing {
+    0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* --- Animation & Transition Utilities --- */
+  .animate-shimmer {
+    background: linear-gradient(90deg, var(--color-border) 25%, var(--color-card) 50%, var(--color-border) 75%);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.3s ease-out;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  .pulse-subtle {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* --- UI Component Styling --- */
   .sidebar {
     transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
     transform: translateZ(0);
@@ -149,81 +212,10 @@
   .sidebar-folded {
     transform: translateX(-100%) translateZ(0);
   }
-  /* Message animations */
-  @keyframes slideUp {
-    from {
-      transform: translateY(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
+  .message-wrapper {
+    animation: messageSlideIn 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    will-change: transform, opacity;
   }
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  @keyframes bounceIn {
-    0% {
-      opacity: 0;
-      transform: scale(0.3);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.05);
-    }
-    70% {
-      transform: scale(0.9);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-  @keyframes shimmer {
-    0% {
-      background-position: -200px 0;
-    }
-    100% {
-      background-position: calc(200px + 100%) 0;
-    }
-  }
-  .animate-slide-up {
-    animation: slideUp 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
-  }
-  .animate-fade-in-up {
-    animation: fadeInUp 0.3s ease-out;
-  }
-  .animate-bounce-in {
-    animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  }
-  /* Smooth loading states */
-  .loading-shimmer {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200px 100%;
-    animation: shimmer 1.5s infinite;
-  }
-  /* Button hover effects */
-  .smooth-button {
-    transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
-    transform: translateZ(0);
-  }
-  .smooth-button:hover {
-    transform: translateY(-1px) translateZ(0);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  .smooth-button:active {
-    transform: translateY(0) translateZ(0);
-    transition: all 0.1s cubic-bezier(0.4, 0.0, 0.2, 1);
-  }
-  /* Message bubble improvements */
   .message-bubble {
     transition: all 0.2s ease-out;
     transform: translateZ(0);
@@ -231,13 +223,6 @@
   .message-bubble:hover {
     transform: translateY(-1px) translateZ(0);
   }
-  /* Smooth focus states */
-  .focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-    transition: outline-offset 0.2s ease;
-  }
-  /* Chat input improvements */
   .chat-input {
     transition: all 0.2s ease;
   }
@@ -245,7 +230,6 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
   }
-  /* Typing indicator */
   .typing-dot {
     width: 8px;
     height: 8px;
@@ -255,141 +239,34 @@
   }
   .typing-dot:nth-child(1) { animation-delay: -0.32s; }
   .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-  @keyframes typing {
-    0%, 80%, 100% {
-      transform: scale(0.8);
-      opacity: 0.5;
-    }
-    40% {
-      transform: scale(1);
-      opacity: 1;
-    }
+
+  /* --- Interactive Button Styles --- */
+  .interactive-button {
+    transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transform: translateZ(0);
+    will-change: transform, box-shadow;
   }
-  /* Enhanced mobile experience */
-  @media (max-width: 768px) {
-    /* Improved touch targets */
-    .touch-target {
-      min-height: 44px;
-      min-width: 44px;
-    }
-    /* Better scroll momentum on iOS */
-    .scroll-container {
-      -webkit-overflow-scrolling: touch;
-      overflow-scrolling: touch;
-    }
-    /* Prevent zoom on input focus */
-    input, textarea, select {
-      font-size: 16px;
-    }
-    
-    /* Marathi adjustments for mobile */
-    body[data-lang="mr"] input,
-    body[data-lang="mr"] textarea,
-    [lang="mr"] input,
-    [lang="mr"] textarea {
-      font-size: 16px !important; /* Prevent zoom */
-    }
+  .interactive-button:hover {
+    transform: translateY(-2px) translateZ(0);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
-  /* PWA Install Prompt Animation */
-  .animate-slide-up {
-    animation: slideUp 0.3s ease-out;
+  .interactive-button:active {
+    transform: translateY(0) translateZ(0);
+    transition-duration: 0.1s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   }
-  /* PWA Specific Styles */
-  @media (display-mode: standalone) {
-    body {
-      user-select: none;
-    }
-    /* Hide scrollbars in standalone mode for cleaner look */
-    ::-webkit-scrollbar {
-      width: 2px;
-    }
-    /* Better safe area handling */
-    .pwa-safe-area {
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
-      padding-left: env(safe-area-inset-left);
-      padding-right: env(safe-area-inset-right);
-    }
+  .interactive-button:disabled {
+    transform: none !important;
+    box-shadow: none !important;
+    opacity: 0.5;
+    cursor: not-allowed;
   }
-  /* Mobile PWA adjustments */
-  @media (max-width: 768px) and (display-mode: standalone) {
-    .sidebar {
-      padding-top: env(safe-area-inset-top);
-    }
-    .mobile-chat-area {
-      padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
-    }
+  .interactive-button:focus-visible {
+    outline: 2px solid var(--color-accent-bg);
+    outline-offset: 2px;
   }
-  /* Smooth modal transitions */
-  .modal-backdrop {
-    backdrop-filter: blur(4px);
-    transition: all 0.2s ease;
-  }
-  .modal-content {
-    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-    transform: translateY(-10px);
-    opacity: 0;
-  }
-  .modal-content.open {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  /* Loading states */
-  .pulse-subtle {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.7;
-    }
-  }
-  /* Improved accessibility */
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-  /* High contrast mode support */
-  @media (prefers-contrast: high) {
-    :root {
-      --color-border: #000000;
-      --color-text-primary: #000000;
-      --color-bg: #ffffff;
-    }
-    .dark {
-      --color-border: #ffffff;
-      --color-text-primary: #ffffff;
-      --color-bg: #000000;
-    }
-  }
-  /* Reduced motion for accessibility */
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
-  /* Smooth spring animations */
-  .spring-bounce {
-    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  }
-  .spring-gentle {
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  }
-  /* Custom button styles that match chat UI */
+  
+  /* Chat UI Specific Button */
   .chat-ui-button {
     background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
     color: white;
@@ -411,5 +288,79 @@
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+  }
+
+  /* --- Modal Styling --- */
+  .modal-backdrop {
+    backdrop-filter: blur(4px);
+    transition: all 0.2s ease;
+  }
+  .modal-content {
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  .modal-content.open {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* --- Mobile & PWA Specific Styles --- */
+  @media (max-width: 768px) {
+    .touch-target { min-height: 44px; min-width: 44px; }
+    .scroll-container { -webkit-overflow-scrolling: touch; }
+    input, textarea, select { font-size: 16px; }
+    body[data-lang="mr"] input,
+    body[data-lang="mr"] textarea,
+    [lang="mr"] input,
+    [lang="mr"] textarea { font-size: 16px !important; }
+  }
+
+  @media (display-mode: standalone) {
+    body { user-select: none; }
+    .pwa-safe-area {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+  }
+
+  @media (max-width: 768px) and (display-mode: standalone) {
+    .sidebar { padding-top: env(safe-area-inset-top); }
+    .mobile-chat-area { padding-bottom: calc(env(safe-area-inset-bottom) + 1rem); }
+  }
+  
+  /* --- Accessibility --- */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  @media (prefers-contrast: high) {
+    :root {
+      --color-border: #000000;
+      --color-text-primary: #000000;
+      --color-bg: #ffffff;
+    }
+    .dark {
+      --color-border: #ffffff;
+      --color-text-primary: #ffffff;
+      --color-bg: #000000;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
