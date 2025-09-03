@@ -326,10 +326,6 @@ class AIService {
   }
 
   async enhancePrompt(prompt: string): Promise<string> {
-    if (!this.googleAI) {
-      throw new Error("Google AI not initialized. Cannot enhance prompt.");
-    }
-    const model = this.googleAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const metaPrompt = `You are a world-class prompt engineering expert. Your task is to enhance a user-provided system prompt to make it more detailed, structured, and effective for guiding an AI chatbot.
     - Add specific instructions and constraints.
     - Define the AI's personality, tone, and forbidden actions.
@@ -337,9 +333,40 @@ class AIService {
     - Return ONLY the enhanced prompt, without any explanations, preambles, or apologies.
     
     Here is the prompt to enhance: "${prompt}"`;
+    
+    // --- START: New logic to prioritize Mistral for enhancement ---
+    if (this.settings?.mistralApiKey) {
+      try {
+        const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.settings.mistralApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'mistral-small-latest',
+            messages: [{ role: 'user', content: metaPrompt }],
+            temperature: 0.5,
+          }),
+        });
+        if (!response.ok) throw new Error(`Mistral API error: ${response.statusText}`);
+        const data = await response.json();
+        return data.choices[0].message.content;
+      } catch (error) {
+        console.error("Mistral enhancement failed, falling back to Google:", error);
+        // Fallback to Google if Mistral fails
+      }
+    }
 
-    const result = await model.generateContent(metaPrompt);
-    return result.response.text();
+    // --- Fallback to Google Gemini ---
+    if (this.googleAI) {
+      const model = this.googleAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const result = await model.generateContent(metaPrompt);
+      return result.response.text();
+    }
+    
+    throw new Error("No API key available to enhance prompt. Please configure a Mistral or Google API key.");
+    // --- END: New logic ---
   }
 }
 
