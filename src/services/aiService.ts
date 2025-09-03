@@ -326,7 +326,7 @@ class AIService {
   }
 
   async enhancePrompt(prompt: string): Promise<string> {
-    const metaPrompt = `You are an adaptive AI assistant designed to deliver clear, engaging, and user-tailored responses. Use markdown formatting with headings, lists, or code blocks to structure answers effectively. Adjust your tone and personality to match user requests, while keeping responses concise and relevant. Politely seek clarification for unclear inputs. Enhance the following user prompt to make it more structured, clear, and effective, using markdown format: "${prompt}"`;
+    const metaPrompt = `You are an AI assistant that refines user prompts to be clear, concise, and effective for another AI model. Adapt your tone and style to match the user's intent, keeping responses simple and engaging. Politely clarify unclear inputs. Enhance the provided prompt to improve its clarity and structure while keeping it brief and direct: "${prompt}"`;
     
     // Prioritize Mistral for enhancement due to its creative capabilities
     if (this.settings?.mistralApiKey) {
