@@ -2,7 +2,7 @@ const CACHE_NAME = 'ai-tutor-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/robot.png',
+  '/white-logo.png',
   '/manifest.json',
   // Add other static assets as needed
 ];
@@ -95,8 +95,8 @@ self.addEventListener('push', event => {
   if (event.data) {
     const options = {
       body: event.data.text(),
-      icon: '/robot.png',
-      badge: '/robot.png',
+      icon: '/white-logo.png',
+      badge: '/white-logo.png',
       vibrate: [100, 50, 100],
       data: {
         dateOfArrival: Date.now(),
