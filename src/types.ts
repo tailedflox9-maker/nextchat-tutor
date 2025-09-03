@@ -15,11 +15,13 @@ export interface Conversation {
   createdAt: Date;
   updatedAt: Date;
   summary?: string;
-  isPinned?: boolean; // New property for pinning conversations
+  isPinned?: boolean;
+  isPersona?: boolean; // New: Flag for custom system prompt chats
+  systemPrompt?: string; // New: Stores the custom system prompt
 }
 
 export interface Note {
-  id: string;
+  id:string;
   title: string;
   content: string;
   createdAt: Date;
