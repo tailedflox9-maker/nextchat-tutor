@@ -1,364 +1,290 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { APISettings } from '../types';
 
-const defaultSystemPromptEN = `You are a helpful AI tutor. Provide clear, educational responses that help users learn effectively.
-Use markdown formatting with headings, lists, and code blocks to structure your answers.
-If the user asks for examples, provide practical examples.
-If the user asks for explanations, break down complex concepts into simple terms.
-If the user asks for a quiz, create a quiz question or practice problem based on the topic.`;
-
-const defaultSystemPromptMR = `तुम्ही एक उपयुक्त एआय शिक्षक आहात. वापरकर्त्यांना प्रभावीपणे शिकण्यास मदत करण्यासाठी स्पष्ट, शैक्षणिक प्रतिसाद द्या.
-आपले उत्तर संरचित करण्यासाठी मार्कडाउन स्वरूपण, शीर्षके, यादी आणि कोड ब्लॉक वापरा.
-जर वापरकर्त्याने उदाहरणे मागितली, तर व्यावहारिक उदाहरणे द्या.
-जर वापरकर्त्याने स्पष्टीकरण मागितले, तर जटिल संकल्पना साध्या भाषेत समजावून सांगा.
-जर वापरकर्त्याने क्विझ मागितली, तर विषयावर आधारित क्विझ प्रश्न किंवा सराव समस्या तयार करा.
-सर्व प्रतिसाद मराठीत द्या.`;
+interface MessageForAPI {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 class AIService {
   private googleAI: GoogleGenerativeAI | null = null;
-  private zhipuAI: any = null;
-  private settings: APISettings | null = null;
-  private language: 'en' | 'mr' = 'en';
+  private settings: APISettings = {
+    googleApiKey: '',
+    zhipuApiKey: '',
+    mistralApiKey: '',
+    selectedModel: 'google',
+  };
+  private selectedLanguage: 'en' | 'mr' = 'en';
 
   updateSettings(settings: APISettings, language: 'en' | 'mr') {
     this.settings = settings;
-    this.language = language;
-    this.initializeProviders();
-  }
-
-  private initializeProviders() {
-    if (!this.settings) return;
-    if (this.settings.googleApiKey) {
-      try {
-        this.googleAI = new GoogleGenerativeAI(this.settings.googleApiKey);
-      } catch (error) {
-        console.error('Failed to initialize Google AI:', error);
-      }
-    }
-    if (this.settings.zhipuApiKey) {
-      try {
-        this.zhipuAI = { apiKey: this.settings.zhipuApiKey };
-      } catch (error) {
-        console.error('Failed to initialize ZhipuAI:', error);
-      }
+    this.selectedLanguage = language;
+    
+    if (settings.googleApiKey) {
+      this.googleAI = new GoogleGenerativeAI(settings.googleApiKey);
     }
   }
 
   async *generateStreamingResponse(
-    messages: Array<{ role: string; content: string }>,
-    language: 'en' | 'mr',
-    conversationSystemPrompt?: string,
-    onUpdate?: (content: string) => void
+    messages: MessageForAPI[],
+    language: 'en' | 'mr' = 'en',
+    systemPrompt?: string
   ): AsyncGenerator<string, void, unknown> {
-    if (!this.settings) {
-      yield language === 'en'
-        ? "Please configure your API keys in the settings first."
-        : "कृपया प्रथम सेटिंग्जमध्ये आपली API की कॉन्फिगर करा.";
-      return;
-    }
-
-    if (messages.length === 0) {
-      // This can happen in a new Persona chat, which is valid.
-      // We will rely on the system prompt to guide the first response.
-    }
+    const model = this.settings.selectedModel;
     
-    const systemPrompt = conversationSystemPrompt || (language === 'en' ? defaultSystemPromptEN : defaultSystemPromptMR);
-
     try {
-      if (this.settings.selectedModel === 'google' && this.googleAI) {
-        yield* this.generateGoogleResponse(messages, systemPrompt, onUpdate);
-      } else if (this.settings.selectedModel === 'zhipu' && this.zhipuAI) {
-        yield* this.generateZhipuResponse(messages, systemPrompt, onUpdate);
-      } else if (this.settings.selectedModel.startsWith('mistral-')) {
-        const model = this.settings.selectedModel.split('-')[1] as 'small' | 'codestral';
-        yield* this.generateMistralResponse(messages, systemPrompt, model, onUpdate);
-      } else {
-        yield language === 'en'
-          ? "Selected model is not available or API key is missing."
-          : "निवडलेले मॉडेल उपलब्ध नाही किंवा API की गहाळ आहे.";
+      switch (model) {
+        case 'google':
+          yield* this.generateGoogleResponse(messages, language, systemPrompt);
+          break;
+        case 'zhipu':
+          yield* this.generateZhipuResponse(messages, language, systemPrompt);
+          break;
+        case 'mistral-small':
+        case 'mistral-codestral':
+          yield* this.generateMistralResponse(messages, language, systemPrompt, model);
+          break;
+        default:
+          throw new Error(`Unsupported model: ${model}`);
       }
     } catch (error) {
-      console.error('Error generating response:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      yield language === 'en'
-        ? `I apologize, but I encountered an error: ${errorMessage}. Please check your API key and try again.`
-        : `मला माफ करा, परंतु मला त्रुटी आली: ${errorMessage}. कृपया तुमची API की तपासा आणि पुन्हा प्रयत्न करा.`;
+      console.error(`Error with ${model}:`, error);
+      throw error;
     }
   }
 
   private async *generateGoogleResponse(
-    messages: Array<{ role: string; content: string }>,
-    systemPrompt: string,
-    onUpdate?: (content: string) => void
+    messages: MessageForAPI[],
+    language: 'en' | 'mr',
+    systemPrompt?: string
   ): AsyncGenerator<string, void, unknown> {
     if (!this.googleAI) {
-      yield this.language === 'en'
-        ? "Google AI is not initialized. Please check your API key."
-        : "गूगल एआय सुरू झाले नाही. कृपया आपली API की तपासा.";
-      return;
+      throw new Error('Google AI not initialized. Please check your API key.');
     }
+
     try {
-      const model = this.googleAI.getGenerativeModel({
-        model: 'gemma-3-27b-it',
-        systemInstruction: systemPrompt,
+      const model = this.googleAI.getGenerativeModel({ 
+        model: 'gemini-1.5-flash',
+        systemInstruction: systemPrompt || this.getDefaultSystemPrompt(language)
       });
+
+      // Convert messages to Google's format
       const history = messages.slice(0, -1).map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }],
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
       }));
+
+      const lastMessage = messages[messages.length - 1];
+      
       const chat = model.startChat({
         history: history,
-      });
-      const lastMessage = messages[messages.length - 1];
-      const result = await chat.sendMessageStream(lastMessage.content);
-      let fullResponse = '';
-      for await (const chunk of result.stream) {
-        const chunkText = chunk.text();
-        if (chunkText) {
-          fullResponse += chunkText;
-          if (onUpdate) onUpdate(fullResponse);
-          yield chunkText;
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 2048,
         }
-      }
-      if (!fullResponse.trim()) {
-        yield this.language === 'en'
-          ? "I apologize, but I couldn't generate a response. Please try again."
-          : "मला माफ करा, पण मी प्रतिसाद तयार करू शकलो नाही. कृपया पुन्हा प्रयत्न करा.";
+      });
+
+      const result = await chat.sendMessageStream(lastMessage.content);
+      
+      for await (const chunk of result.stream) {
+        const text = chunk.text();
+        if (text) {
+          yield text;
+        }
       }
     } catch (error) {
-      console.error('Google AI API Error:', error);
-      if (error instanceof Error) {
-        const errorMsg = error.message.toLowerCase();
-        if (errorMsg.includes('api key') || errorMsg.includes('authentication')) {
-          yield this.language === 'en'
-            ? "Invalid API key. Please check your Google AI API key in settings."
-            : "अवैध API की. कृपया सेटिंग्जमध्ये आपली Google AI API की तपासा.";
-        } else if (errorMsg.includes('quota') || errorMsg.includes('limit')) {
-          yield this.language === 'en'
-            ? "API quota exceeded. Please check your usage limits or try again later."
-            : "API कोटा ओलांडला आहे. कृपया आपल्या वापराच्या मर्यादा तपासा किंवा नंतर पुन्हा प्रयत्न करा.";
-        } else if (errorMsg.includes('safety') || errorMsg.includes('blocked')) {
-          yield this.language === 'en'
-            ? "The response was blocked by safety filters. Please try rephrasing your question."
-            : "सुरक्षा फिल्टरद्वारे प्रतिसाद अवरोधित केला गेला. कृपया आपला प्रश्न पुन्हा शब्दबद्ध करण्याचा प्रयत्न करा.";
-        } else {
-          yield this.language === 'en'
-            ? `Google AI Error: ${error.message}`
-            : `गूगल एआय त्रुटी: ${error.message}`;
-        }
-      } else {
-        yield this.language === 'en'
-          ? "An unexpected error occurred with Google AI. Please try again."
-          : "गूगल एआयसह अनपेक्षित त्रुटी आली. कृपया पुन्हा प्रयत्न करा.";
-      }
+      console.error('Google AI Error:', error);
+      throw new Error(`Google AI Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   private async *generateZhipuResponse(
-    messages: Array<{ role: string; content: string }>,
-    systemPrompt: string,
-    onUpdate?: (content: string) => void
+    messages: MessageForAPI[],
+    language: 'en' | 'mr',
+    systemPrompt?: string
   ): AsyncGenerator<string, void, unknown> {
-    if (!this.zhipuAI?.apiKey) {
-      yield this.language === 'en'
-        ? "ZhipuAI is not properly configured."
-        : "झिपूएआय योग्यरित्या कॉन्फिगर केलेले नाही.";
-      return;
+    if (!this.settings.zhipuApiKey) {
+      throw new Error('ZhipuAI API key not configured');
     }
-    
-    const apiMessages = [{ role: 'system', content: systemPrompt }, ...messages];
 
     try {
+      // Prepare messages with system prompt
+      const systemMessage = {
+        role: 'system' as const,
+        content: systemPrompt || this.getDefaultSystemPrompt(language)
+      };
+
+      const requestMessages = [systemMessage, ...messages];
+
       const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.zhipuAI.apiKey}`,
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.settings.zhipuApiKey}`
         },
         body: JSON.stringify({
-          model: 'GLM-4.5-Flash',
-          messages: apiMessages,
+          model: 'glm-4-flash',
+          messages: requestMessages,
           stream: true,
           temperature: 0.7,
-          max_tokens: 2048,
-        }),
+          max_tokens: 2048
+        })
       });
+
       if (!response.ok) {
         const errorText = await response.text();
-        yield this.language === 'en'
-          ? `ZhipuAI API Error: ${response.status} ${response.statusText}. ${errorText}`
-          : `झिपूएआय API त्रुटी: ${response.status} ${response.statusText}. ${errorText}`;
-        return;
+        throw new Error(`ZhipuAI API Error: ${response.status} - ${errorText}`);
       }
+
       const reader = response.body?.getReader();
-      if (!reader) {
-        yield this.language === 'en'
-          ? "Error: Unable to read response stream"
-          : "त्रुटी: प्रतिसाद प्रवाह वाचण्यात अक्षम";
-        return;
-      }
+      if (!reader) throw new Error('No response body');
+
       const decoder = new TextDecoder();
-      let fullResponse = '';
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6).trim();
-              if (data === '[DONE]') return;
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-                if (content) {
-                  fullResponse += content;
-                  if (onUpdate) onUpdate(fullResponse);
-                  yield content;
-                }
-              } catch (e) {
-                console.warn('Failed to parse JSON:', data);
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') return;
+            
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                yield content;
               }
+            } catch (e) {
+              // Skip invalid JSON
             }
           }
         }
-      } finally {
-        reader.releaseLock();
-      }
-      if (!fullResponse.trim()) {
-        yield this.language === 'en'
-          ? "No response received from ZhipuAI. Please try again."
-          : "झिपूएआय कडून कोणताही प्रतिसाद मिळाला नाही. कृपया पुन्हा प्रयत्न करा.";
       }
     } catch (error) {
       console.error('ZhipuAI Error:', error);
-      yield this.language === 'en'
-        ? `ZhipuAI Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-        : `झिपूएआय त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`;
+      throw new Error(`ZhipuAI Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   private async *generateMistralResponse(
-    messages: Array<{ role: string; content: string }>,
-    systemPrompt: string,
-    model: 'small' | 'codestral',
-    onUpdate?: (content: string) => void
+    messages: MessageForAPI[],
+    language: 'en' | 'mr',
+    systemPrompt?: string,
+    model: 'mistral-small' | 'mistral-codestral'
   ): AsyncGenerator<string, void, unknown> {
-    if (!this.settings?.mistralApiKey) {
-      yield this.language === 'en'
-        ? "Mistral AI is not properly configured."
-        : "मिस्ट्रल एआय योग्यरित्या कॉन्फिगर केलेले नाही.";
-      return;
+    if (!this.settings.mistralApiKey) {
+      throw new Error('Mistral API key not configured');
     }
 
-    const apiMessages = [{ role: 'system', content: systemPrompt }, ...messages];
-
     try {
+      // Prepare messages with system prompt
+      const systemMessage = {
+        role: 'system' as const,
+        content: systemPrompt || this.getDefaultSystemPrompt(language)
+      };
+
+      const requestMessages = [systemMessage, ...messages];
+
+      const modelName = model === 'mistral-codestral' ? 'codestral-latest' : 'mistral-small-latest';
+
       const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.settings.mistralApiKey}`,
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.settings.mistralApiKey}`
         },
         body: JSON.stringify({
-          model: model === 'small' ? 'mistral-small-latest' : 'codestral-latest',
-          messages: apiMessages,
+          model: modelName,
+          messages: requestMessages,
           stream: true,
           temperature: 0.7,
-          max_tokens: 2048,
-        }),
+          max_tokens: 2048
+        })
       });
+
       if (!response.ok) {
         const errorText = await response.text();
-        yield this.language === 'en'
-          ? `Mistral API Error: ${response.status} ${response.statusText}. ${errorText}`
-          : `मिस्ट्रल API त्रुटी: ${response.status} ${response.statusText}. ${errorText}`;
-        return;
+        throw new Error(`Mistral API Error: ${response.status} - ${errorText}`);
       }
+
       const reader = response.body?.getReader();
-      if (!reader) {
-        yield this.language === 'en'
-          ? "Error: Unable to read response stream"
-          : "त्रुटी: प्रतिसाद प्रवाह वाचण्यात अक्षम";
-        return;
-      }
+      if (!reader) throw new Error('No response body');
+
       const decoder = new TextDecoder();
-      let fullResponse = '';
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6).trim();
-              if (data === '[DONE]') return;
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-                if (content) {
-                  fullResponse += content;
-                  if (onUpdate) onUpdate(fullResponse);
-                  yield content;
-                }
-              } catch (e) {
-                console.warn('Failed to parse JSON:', data);
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') return;
+            
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                yield content;
               }
+            } catch (e) {
+              // Skip invalid JSON
             }
           }
         }
-      } finally {
-        reader.releaseLock();
-      }
-      if (!fullResponse.trim()) {
-        yield this.language === 'en'
-          ? "No response received from Mistral. Please try again."
-          : "मिस्ट्रलकडून कोणताही प्रतिसाद मिळाला नाही. कृपया पुन्हा प्रयत्न करा.";
       }
     } catch (error) {
       console.error('Mistral Error:', error);
-      yield this.language === 'en'
-        ? `Mistral Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-        : `मिस्ट्रल त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`;
+      throw new Error(`Mistral Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
+  private getDefaultSystemPrompt(language: 'en' | 'mr'): string {
+    if (language === 'mr') {
+      return 'तुम्ही एक सहाय्यक आणि ज्ञानी शिक्षक आहात. तुम्ही स्पष्ट, तपशीलवार आणि उपयुक्त उत्तरे देता. तुम्ही नेहमी मराठी भाषेत उत्तर द्या.';
+    }
+    return 'You are a helpful and knowledgeable tutor. You provide clear, detailed, and useful answers to help users learn and understand various topics.';
+  }
+
   async enhancePrompt(prompt: string): Promise<string> {
-    const metaPrompt = `Enhance this AI persona prompt to make it more effective and engaging. Keep the core intent but add specificity. Make it concise and avoid markdown formatting. Return only the enhanced prompt without any explanations:"${prompt}"`;
-    
-    // Prioritize Mistral for enhancement due to its creative capabilities
-    if (this.settings?.mistralApiKey) {
-      try {
-        const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${this.settings.mistralApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'mistral-small-latest',
-            messages: [{ role: 'user', content: metaPrompt }],
-            temperature: 0.5,
-          }),
-        });
-        if (!response.ok) throw new Error(`Mistral API error: ${response.statusText}`);
-        const data = await response.json();
-        return data.choices[0].message.content;
-      } catch (error) {
-        console.error("Mistral enhancement failed, falling back to Google:", error);
-      }
+    if (!this.settings.googleApiKey && !this.settings.zhipuApiKey && !this.settings.mistralApiKey) {
+      throw new Error('No API key configured');
     }
 
-    // Fallback to Google Gemma 2
-    if (this.googleAI) {
-      const model = this.googleAI.getGenerativeModel({ model: 'gemma-2-9b-it' });
-      const result = await model.generateContent(metaPrompt);
-      return result.response.text();
-    }
+    const enhanceMessages: MessageForAPI[] = [
+      {
+        role: 'user',
+        content: this.selectedLanguage === 'en' 
+          ? `Please enhance and improve this system prompt to make it more detailed, specific, and effective for an AI assistant. The prompt should be clear, comprehensive, and actionable. Here's the original prompt: "${prompt}"`
+          : `कृपया या सिस्टम प्रॉम्प्टला अधिक तपशीलवार, विशिष्ट आणि AI सहाय्यकासाठी अधिक प्रभावी बनवण्यासाठी सुधारा. प्रॉम्प्ट स्पष्ट, सर्वसमावेशक आणि कार्यक्षम असावा. मूळ प्रॉम्प्ट हा आहे: "${prompt}"`
+      }
+    ];
+
+    let enhancedPrompt = '';
     
-    throw new Error("No API key available to enhance prompt. Please configure a Mistral or Google API key.");
+    try {
+      for await (const chunk of this.generateStreamingResponse(enhanceMessages, this.selectedLanguage)) {
+        enhancedPrompt += chunk;
+      }
+      return enhancedPrompt.trim();
+    } catch (error) {
+      console.error('Error enhancing prompt:', error);
+      throw error;
+    }
   }
 }
 
