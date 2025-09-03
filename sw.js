@@ -45,7 +45,8 @@ self.addEventListener('fetch', event => {
 
   // Skip external API requests
   if (event.request.url.includes('googleapis.com') || 
-      event.request.url.includes('bigmodel.cn')) {
+      event.request.url.includes('bigmodel.cn') ||
+      event.request.url.includes('api.mistral.ai')) {
     return;
   }
 
