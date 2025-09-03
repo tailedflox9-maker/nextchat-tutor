@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
-import { Bot, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { Message } from '../types';
@@ -98,8 +98,8 @@ export function ChatArea({
       {allMessages.length === 0 && !isLoading ? (
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center max-w-md w-full">
-            <div className="w-24 h-24 bg-[var(--color-card)] rounded-full flex items-center justify-center mx-auto mb-6">
-              <Bot className="w-12 h-12 text-[var(--color-text-primary)]" />
+            <div className="w-24 h-24 bg-[var(--color-card)] rounded-full flex items-center justify-center mx-auto mb-6 p-4">
+              <img src="/white-logo.png" alt="AI Tutor Logo" className="w-full h-full object-contain" />
             </div>
             <h2 className="text-5xl font-bold text-[var(--color-text-primary)] mb-4">
               {selectedLanguage === 'en' ? 'AI Tutor' : 'एआय शिक्षक'}
