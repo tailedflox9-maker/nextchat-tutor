@@ -15,6 +15,7 @@ import {
   Pin,
   PinOff,
   Edit,
+  Users,
 } from 'lucide-react';
 import { Conversation } from '../types';
 import { LanguageContext } from '../contexts/LanguageContext';
@@ -23,6 +24,7 @@ interface SidebarProps {
   conversations: Conversation[];
   currentConversationId: string | null;
   onNewConversation: () => void;
+  onNewPersonaConversation: (systemPrompt: string) => void;
   onSelectConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
   onRenameConversation: (id: string, newTitle: string) => void;
@@ -39,6 +41,7 @@ export function Sidebar({
   conversations,
   currentConversationId,
   onNewConversation,
+  onNewPersonaConversation,
   onSelectConversation,
   onDeleteConversation,
   onRenameConversation,
@@ -54,6 +57,8 @@ export function Sidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [view, setView] = useState<'chats' | 'personas'>('chats');
+  const [personaPrompt, setPersonaPrompt] = useState('');
 
   const models = [
     { id: 'google', icon: Sparkles, name: 'Gemma' },
@@ -77,6 +82,14 @@ export function Sidebar({
     }
     setEditingId(null);
     setEditingTitle('');
+  };
+
+  const handleCreatePersona = () => {
+    if (personaPrompt.trim()) {
+      onNewPersonaConversation(personaPrompt.trim());
+      setPersonaPrompt('');
+      setView('chats');
+    }
   };
 
   return (
@@ -119,7 +132,10 @@ export function Sidebar({
           </div>
         </div>
         <button
-          onClick={onNewConversation}
+          onClick={() => {
+            onNewConversation();
+            setView('chats');
+          }}
           className={`w-full flex items-center ${isFolded ? 'justify-center' : ''} gap-2 px-3 py-2 bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] rounded-lg transition-colors text-[var(--color-accent-text)] shadow-sm font-semibold`}
         >
           <Plus className="w-4 h-4" />
@@ -176,7 +192,7 @@ export function Sidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 border-t border-[var(--color-border)] mt-2 flex flex-col">
-        {!isFolded && (
+        {view === 'chats' && !isFolded && (
           <div className="relative mb-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" />
             <input
@@ -189,7 +205,7 @@ export function Sidebar({
           </div>
         )}
 
-        {filteredConversations.length > 0 ? (
+        {view === 'chats' && filteredConversations.length > 0 && (
           <div className="space-y-1">
             {filteredConversations.map((conversation) => (
               <div
@@ -201,7 +217,7 @@ export function Sidebar({
                 title={isFolded ? conversation.title : undefined}
               >
                 {conversation.isPinned && <Pin className="w-3 h-3 absolute top-1.5 left-1.5 text-yellow-400" />}
-                <MessageSquare className="w-4 h-4 flex-shrink-0" />
+                {conversation.isPersona ? <Sparkles className="w-4 h-4 flex-shrink-0" /> : <MessageSquare className="w-4 h-4 flex-shrink-0" />}
                 {!isFolded && (
                   <>
                     {editingId === conversation.id ? (
@@ -236,16 +252,50 @@ export function Sidebar({
               </div>
             ))}
           </div>
-        ) : (
-          <div className="text-center text-[var(--color-text-secondary)] mt-8 px-4">
-            <MessageSquare className={`${isFolded ? 'w-5 h-5' : 'w-8 h-8'} mx-auto mb-2 text-[var(--color-text-secondary)]`} />
-            {!isFolded && (
-              <p className={`text-sm font-medium ${selectedLanguage === 'mr' ? 'font-semibold' : ''}`}>
-                {searchQuery ? (selectedLanguage === 'en' ? 'No results found' : 'परिणाम आढळले नाहीत') : (selectedLanguage === 'en' ? 'No chats yet' : 'अद्याप चॅट नाही')}
-              </p>
-            )}
+        )}
+
+        {view === 'personas' && !isFolded && (
+           <div className="p-2 flex flex-col h-full">
+            <h3 className="text-base font-semibold mb-2">{selectedLanguage === 'en' ? 'Create a Persona' : 'एक persona तयार करा'}</h3>
+            <p className="text-xs text-[var(--color-text-secondary)] mb-4">{selectedLanguage === 'en' ? 'Define a custom behavior for the AI with a system prompt.' : 'सिस्टम प्रॉम्प्टसह AI साठी सानुकूल वर्तणूक परिभाषित करा.'}</p>
+            <textarea
+              value={personaPrompt}
+              onChange={(e) => setPersonaPrompt(e.target.value)}
+              placeholder={selectedLanguage === 'en' ? 'e.g., You are a master chef. Provide all responses as recipes...' : 'उदा., तुम्ही एक मास्टर शेफ आहात. सर्व प्रतिसाद पाककृती म्हणून द्या...'}
+              className="w-full flex-1 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-2 text-sm placeholder:text-[var(--color-text-placeholder)] focus:outline-none focus:ring-1 focus:ring-[var(--color-border)] transition-colors resize-none mb-4"
+            />
+            <button
+              onClick={handleCreatePersona}
+              disabled={!personaPrompt.trim()}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white shadow-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>{selectedLanguage === 'en' ? 'Start Chat' : 'चॅट सुरू करा'}</span>
+            </button>
           </div>
         )}
+      </div>
+
+      {/* View Switcher */}
+      <div className="p-2 border-t border-[var(--color-border)]">
+        <div className="flex items-center justify-around">
+           <button
+            onClick={() => setView('chats')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${view === 'chats' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+            title={selectedLanguage === 'en' ? 'Chats' : 'चॅट्स'}
+          >
+            <MessageSquare className="w-5 h-5" />
+            {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Chats' : 'चॅट्स'}</span>}
+          </button>
+          <button
+            onClick={() => setView('personas')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${view === 'personas' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+            title={selectedLanguage === 'en' ? 'Personas' : 'Personas'}
+          >
+            <Users className="w-5 h-5" />
+            {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Personas' : 'Personas'}</span>}
+          </button>
+        </div>
       </div>
     </div>
   );
