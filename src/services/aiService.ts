@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, Content } from '@google/generative-ai';
-import { APISettings } from '../types';
+import { APISettings, Conversation, StudySession } from '../types';
 
 const defaultSystemPromptEN = `You are a helpful AI tutor. Provide clear, educational responses that help users learn effectively.
 Use markdown formatting with headings, lists, and code blocks to structure your answers.
@@ -101,7 +101,7 @@ class AIService {
     }
     try {
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemma-3-27b-it',
+        model: 'gemini-1.5-flash-latest', // Updated to flash for better speed
       });
 
       // Merge same-role messages
@@ -119,21 +119,21 @@ class AIService {
         mergedMessages.push(currentMessage);
       }
 
-      // Prepend system prompt into first user message
-      if (mergedMessages.length > 0 && mergedMessages[0].role === 'user') {
-        mergedMessages[0].content = `${systemPrompt}\n\n${mergedMessages[0].content}`;
-      } else {
-        mergedMessages.unshift({ role: 'user', content: systemPrompt });
-      }
-
       const contents: Content[] = mergedMessages.map((msg) => ({
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.content }],
       }));
 
       if (contents.length === 0) return;
-
-      const result = await model.generateContentStream({ contents });
+      
+      const result = await model.generateContentStream({ 
+        contents,
+        // Using systemInstruction is preferred for newer models
+        systemInstruction: {
+          role: 'system',
+          parts: [{ text: systemPrompt }]
+        }
+      });
 
       let fullResponse = '';
       for await (const chunk of result.stream) {
@@ -185,11 +185,11 @@ class AIService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'GLM-4.5-Flash',
+            model: 'glm-4-flash', // Updated to flash model
             messages: apiMessages,
             stream: true,
             temperature: 0.7,
-            max_tokens: 2048,
+            max_tokens: 8192,
           }),
         }
       );
@@ -281,7 +281,7 @@ class AIService {
             messages: apiMessages,
             stream: true,
             temperature: 0.7,
-            max_tokens: 2048,
+            max_tokens: 8192,
           }),
         }
       );
@@ -371,7 +371,7 @@ class AIService {
     }
 
     if (this.googleAI) {
-      const model = this.googleAI.getGenerativeModel({ model: 'gemma-3-27b-it' });
+      const model = this.googleAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
       const result = await model.generateContent(metaPrompt);
       return result.response.text();
     }
@@ -379,6 +379,74 @@ class AIService {
     throw new Error(
       'No API key available to enhance prompt. Please configure a Mistral or Google API key.'
     );
+  }
+
+  async generateQuiz(conversation: Conversation): Promise<StudySession> {
+    if (!this.googleAI) {
+      throw new Error(
+        'Google AI service not initialized. A Google API key is required to generate quizzes.'
+      );
+    }
+    
+    const model = this.googleAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    
+    const conversationText = conversation.messages
+      .map(m => `${m.role}: ${m.content}`)
+      .join('\n\n');
+
+    const prompt = `
+      Based on the following conversation, create a multiple-choice quiz with 5 questions to test understanding of the key topics.
+      The questions should be relevant to the main subjects discussed. For each question, provide 4 options and indicate the correct answer. Also, provide a brief explanation for why the answer is correct.
+
+      Return the response as a valid JSON object only. Do not include any other text or markdown formatting.
+      The JSON object should have a single key "questions", which is an array of objects.
+      Each object in the array should have the following keys: "id", "question", "options", "answer", "explanation".
+      The "id" should be a unique string.
+      The "options" should be an array of 4 strings.
+      The "answer" should be one of the strings from the "options" array.
+      
+      Example format:
+      {
+        "questions": [
+          {
+            "id": "q1",
+            "question": "What is the capital of France?",
+            "options": ["Berlin", "Madrid", "Paris", "Rome"],
+            "answer": "Paris",
+            "explanation": "Paris has been the capital of France since the 10th century."
+          }
+        ]
+      }
+
+      Here is the conversation content:
+      ---
+      ${conversationText}
+      ---
+    `;
+
+    try {
+      const result = await model.generateContent(prompt);
+      const rawJson = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(rawJson);
+
+      if (!parsed.questions || !Array.isArray(parsed.questions)) {
+        throw new Error('AI returned invalid quiz format.');
+      }
+
+      const studySession: StudySession = {
+        id: `quiz-${conversation.id}`,
+        conversationId: conversation.id,
+        type: 'quiz',
+        questions: parsed.questions,
+        createdAt: new Date(),
+      };
+      
+      return studySession;
+
+    } catch (error) {
+      console.error("Error generating or parsing quiz:", error);
+      throw new Error("Failed to generate a valid quiz. The AI's response might have been malformed.");
+    }
   }
 }
 
