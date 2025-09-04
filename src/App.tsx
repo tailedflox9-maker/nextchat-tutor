@@ -162,10 +162,14 @@ function App() {
   };
   
   const handleGenerateQuiz = async () => {
-    if (!currentConversation) return;
+    const conversation = conversations.find(c => c.id === currentConversationId);
+    if (!conversation) return;
+
     setIsQuizLoading(true);
     try {
-      const session = await aiService.generateQuiz(currentConversation);
+      // Reverted to passing the entire conversation object, as this is what your aiService.ts file expects.
+      const session = await aiService.generateQuiz(conversation);
+      
       setStudySession(session);
       setIsQuizModalOpen(true);
     } catch (error) {
@@ -219,7 +223,6 @@ function App() {
       setStreamingMessage(assistantMessage);
 
       let fullResponse = '';
-      // Use the messages from the object we just created. This is the fix.
       const messagesForApi = conversationToUpdate.messages.map(m => ({ role: m.role, content: m.content }));
 
       for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage, conversationToUpdate.systemPrompt)) {
@@ -230,7 +233,6 @@ function App() {
 
       const finalAssistantMessage: Message = { ...assistantMessage, content: fullResponse };
       
-      // Append the final assistant message to the state
       setConversations(prev => prev.map(conv =>
         conv.id === conversationToUpdate.id
           ? { ...conv, messages: [...conv.messages, finalAssistantMessage], updatedAt: new Date() }
@@ -273,7 +275,6 @@ function App() {
     const messageIndex = conversation.messages.findIndex(m => m.id === messageId);
     if (messageIndex === -1 || conversation.messages[messageIndex].role !== 'assistant') return;
 
-    // Correct: History should include messages up to the user message that prompted the response
     const history = conversation.messages.slice(0, messageIndex);
     if (history.length === 0 || history[history.length - 1].role !== 'user') {
         console.error("Cannot regenerate without a preceding user message.");
@@ -281,7 +282,6 @@ function App() {
     }
     const messagesForApi = history.map(m => ({ role: m.role, content: m.content }));
 
-    // Immediately update the UI to remove the old assistant message
     setConversations(prev => prev.map(conv => {
         if (conv.id === currentConversationId) {
             return { ...conv, messages: history, updatedAt: new Date() };
@@ -305,7 +305,6 @@ function App() {
 
         const finalAssistantMessage: Message = { ...assistantMessage, content: fullResponse };
         
-        // Append the new assistant message to the history
         setConversations(prev => prev.map(conv => 
             conv.id === currentConversationId 
             ? { ...conv, messages: [...history, finalAssistantMessage], updatedAt: new Date() } 
@@ -314,7 +313,6 @@ function App() {
     } catch (error) {
         console.error('Error regenerating response:', error);
         const errorMessage: Message = { id: generateId(), content: `Sorry, an error occurred while regenerating. Error: ${error instanceof Error ? error.message : 'Unknown error'}`, role: 'assistant', timestamp: new Date() };
-        // If an error occurs, add the error message and restore the original history
         setConversations(prev => prev.map(conv => 
             conv.id === currentConversationId 
             ? { ...conv, messages: [...history, errorMessage] } 
@@ -355,43 +353,30 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Mobile backdrop for sidebar */}
-      {sidebarOpen && window.innerWidth < 1024 && (
-        <div 
-          className="sidebar-backdrop"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <Sidebar
+        conversations={sortedConversations}
+        notes={sortedNotes}
+        activeView={activeView}
+        currentConversationId={currentConversationId}
+        currentNoteId={currentNoteId}
+        onNewConversation={handleNewConversation}
+        onNewPersonaConversation={handleNewPersonaConversation}
+        onSelectConversation={handleSelectConversation}
+        onSelectNote={handleSelectNote}
+        onDeleteConversation={handleDeleteConversation}
+        onRenameConversation={handleRenameConversation}
+        onTogglePinConversation={handleTogglePinConversation}
+        onDeleteNote={handleDeleteNote}
+        onOpenSettings={() => setSettingsOpen(true)}
+        settings={settings}
+        onModelChange={handleModelChange}
+        onCloseSidebar={() => setSidebarOpen(false)}
+        isFolded={sidebarFolded}
+        onToggleFold={() => setSidebarFolded(!sidebarFolded)}
+        isSidebarOpen={sidebarOpen}
+      />
 
-      {/* Sidebar */}
-      <div className={`sidebar ${sidebarFolded ? 'sidebar-folded' : ''} ${sidebarOpen ? 'sidebar-open' : ''}`}>
-        <Sidebar
-          conversations={sortedConversations}
-          notes={sortedNotes}
-          activeView={activeView}
-          currentConversationId={currentConversationId}
-          currentNoteId={currentNoteId}
-          onNewConversation={handleNewConversation}
-          onNewPersonaConversation={handleNewPersonaConversation}
-          onSelectConversation={handleSelectConversation}
-          onSelectNote={handleSelectNote}
-          onDeleteConversation={handleDeleteConversation}
-          onRenameConversation={handleRenameConversation}
-          onTogglePinConversation={handleTogglePinConversation}
-          onDeleteNote={handleDeleteNote}
-          onOpenSettings={() => setSettingsOpen(true)}
-          settings={settings}
-          onModelChange={handleModelChange}
-          onCloseSidebar={() => setSidebarOpen(false)}
-          isFolded={sidebarFolded}
-          onToggleFold={() => setSidebarFolded(!sidebarFolded)}
-          isSidebarOpen={sidebarOpen}
-        />
-      </div>
-
-      {/* Main Content Area */}
       <div className="main-content">
-        {/* Mobile menu button */}
         {!sidebarOpen && (
           <button 
             onClick={() => setSidebarOpen(true)} 
@@ -422,7 +407,6 @@ function App() {
         )}
       </div>
 
-      {/* Modals */}
       <SettingsModal 
         isOpen={settingsOpen} 
         onClose={() => setSettingsOpen(false)} 
