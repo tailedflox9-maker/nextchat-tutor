@@ -1,7 +1,8 @@
-import { Conversation, APISettings } from '../types';
+import { Conversation, APISettings, Note } from '../types';
 
 const CONVERSATIONS_KEY = 'ai-tutor-conversations';
 const SETTINGS_KEY = 'ai-tutor-settings';
+const NOTES_KEY = 'ai-tutor-notes';
 
 const defaultSettings: APISettings = {
   googleApiKey: '',
@@ -59,4 +60,34 @@ export const storageUtils = {
       console.error('Error saving settings:', error);
     }
   },
+
+  getNotes(): Note[] {
+    try {
+      const stored = localStorage.getItem(NOTES_KEY);
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      return parsed.map((note: any) => ({
+        ...note,
+        createdAt: new Date(note.createdAt),
+        updatedAt: new Date(note.updatedAt),
+      }));
+    } catch (error) {
+      console.error('Error loading notes:', error);
+      return [];
+    }
+  },
+
+  saveNotes(notes: Note[]): void {
+    try {
+      localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+    } catch (error) {
+      console.error('Error saving notes:', error);
+    }
+  },
+
+  clearAllData(): void {
+    localStorage.removeItem(CONVERSATIONS_KEY);
+    localStorage.removeItem(SETTINGS_KEY);
+    localStorage.removeItem(NOTES_KEY);
+  }
 };
