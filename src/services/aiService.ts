@@ -1,18 +1,9 @@
 import { GoogleGenerativeAI, Content } from '@google/generative-ai';
 import { APISettings, Conversation, StudySession } from '../types';
 
-const defaultSystemPromptEN = `You are a helpful AI tutor. Provide clear, educational responses that help users learn effectively.
-Use markdown formatting with headings, lists, and code blocks to structure your answers.
-If the user asks for examples, provide practical examples.
-If the user asks for explanations, break down complex concepts into simple terms.
-If the user asks for a quiz, create a quiz question or practice problem based on the topic.`;
+const defaultSystemPromptEN = `You are a helpful AI tutor. Provide clear, educational responses that help users learn effectively. Use markdown formatting with headings, lists, and code blocks to structure your answers. If the user asks for examples, provide practical examples. If the user asks for explanations, break down complex concepts into simple terms. If the user asks for a quiz, create a quiz question or practice problem based on the topic.`;
 
-const defaultSystemPromptMR = `तुम्ही एक उपयुक्त एआय शिक्षक आहात. वापरकर्त्यांना प्रभावीपणे शिकण्यास मदत करण्यासाठी स्पष्ट, शैक्षणिक प्रतिसाद द्या.
-आपले उत्तर संरचित करण्यासाठी मार्कडाउन स्वरूपण, शीर्षके, यादी आणि कोड ब्लॉक वापरा.
-जर वापरकर्त्याने उदाहरणे मागितली, तर व्यावहारिक उदाहरणे द्या.
-जर वापरकर्त्याने स्पष्टीकरण मागितले, तर जटिल संकल्पना साध्या भाषेत समजावून सांगा.
-जर वापरकर्त्याने क्विझ मागितली, तर विषयावर आधारित क्विझ प्रश्न किंवा सराव समस्या तयार करा.
-सर्व प्रतिसाद मराठीत द्या.`;
+const defaultSystemPromptMR = `तुम्ही एक उपयुक्त एआय शिक्षक आहात. वापरकर्त्यांना प्रभावीपणे शिकण्यास मदत करण्यासाठी स्पष्ट, शैक्षणिक प्रतिसाद द्या. आपले उत्तर संरचित करण्यासाठी मार्कडाउन स्वरूपण, शीर्षके, यादी आणि कोड ब्लॉक वापरा. जर वापरकर्त्याने उदाहरणे मागितली, तर व्यावहारिक उदाहरणे द्या. जर वापरकर्त्याने स्पष्टीकरण मागितले, तर जटिल संकल्पना साध्या भाषेत समजावून सांगा. जर वापरकर्त्याने क्विझ मागितली, तर विषयावर आधारित क्विझ प्रश्न किंवा सराव समस्या तयार करा. सर्व प्रतिसाद मराठीत द्या.`;
 
 class AIService {
   private googleAI: GoogleGenerativeAI | null = null;
@@ -69,9 +60,7 @@ class AIService {
       } else if (this.settings.selectedModel === 'zhipu' && this.zhipuAI) {
         yield* this.generateZhipuResponse(messages, systemPrompt, onUpdate);
       } else if (this.settings.selectedModel?.startsWith('mistral-')) {
-        const model = this.settings.selectedModel.split('-')[1] as
-          | 'small'
-          | 'codestral';
+        const model = this.settings.selectedModel.split('-')[1] as 'small' | 'codestral';
         yield* this.generateMistralResponse(messages, systemPrompt, model, onUpdate);
       } else {
         yield language === 'en'
@@ -80,8 +69,7 @@ class AIService {
       }
     } catch (error) {
       console.error('Error generating response:', error);
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       yield language === 'en'
         ? `I encountered an error: ${errorMessage}. Please check your API key and try again.`
         : `मला त्रुटी आली: ${errorMessage}. कृपया तुमची API की तपासा आणि पुन्हा प्रयत्न करा.`;
@@ -99,14 +87,13 @@ class AIService {
         : 'गूगल एआय सुरू झाले नाही. कृपया आपली API की तपासा.';
       return;
     }
+
     try {
-      // RECOMMENDED CHANGE: Use the same modern, fast model as other functions.
-      // This model correctly supports `systemInstruction`.
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemini-1.5-flash-latest', 
+        model: 'gemma-3-27b-it',
       });
 
-      // Merge consecutive same-role messages for a cleaner history
+      // Merge consecutive same-role messages
       const mergedMessages: Array<{ role: string; content: string }> = [];
       if (messages.length > 0) {
         let currentMessage = { ...messages[0] };
@@ -121,22 +108,18 @@ class AIService {
         mergedMessages.push(currentMessage);
       }
 
-      const contents: Content[] = mergedMessages.map((msg) => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }],
-      }));
+      // Prepend system prompt as the first user message
+      const contents: Content[] = [
+        { role: 'user', parts: [{ text: systemPrompt }] },
+        ...mergedMessages.map((msg) => ({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.content }],
+        })),
+      ];
 
       if (contents.length === 0) return;
-      
-      const result = await model.generateContentStream({ 
-        contents,
-        // Using `systemInstruction` is the preferred and more robust method for Gemini models.
-        systemInstruction: {
-          role: 'system',
-          parts: [{ text: systemPrompt }]
-        }
-      });
 
+      const result = await model.generateContentStream({ contents });
       let fullResponse = '';
       for await (const chunk of result.stream) {
         const chunkText = chunk.text();
@@ -146,6 +129,7 @@ class AIService {
           yield chunkText;
         }
       }
+
       if (!fullResponse.trim()) {
         yield this.language === 'en'
           ? "I couldn't generate a response. Please try again."
@@ -176,25 +160,25 @@ class AIService {
         : 'झिपूएआय योग्यरित्या कॉन्फिगर केलेले नाही.';
       return;
     }
+
     const apiMessages = [{ role: 'system', content: systemPrompt }, ...messages];
+
     try {
-      const response = await fetch(
-        'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.zhipuAI.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'glm-4.5-flash', // Updated to flash model
-            messages: apiMessages,
-            stream: true,
-            temperature: 0.7,
-            max_tokens: 8192,
-          }),
-        }
-      );
+      const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.zhipuAI.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'glm-4.5-flash',
+          messages: apiMessages,
+          stream: true,
+          temperature: 0.7,
+          max_tokens: 8192,
+        }),
+      });
+
       if (!response.ok) {
         const errorText = await response.text();
         yield this.language === 'en'
@@ -202,6 +186,7 @@ class AIService {
           : `झिपूएआय API त्रुटी: ${response.status} ${response.statusText}. ${errorText}`;
         return;
       }
+
       const reader = response.body?.getReader();
       if (!reader) {
         yield this.language === 'en'
@@ -209,8 +194,10 @@ class AIService {
           : 'त्रुटी: प्रतिसाद प्रवाह वाचण्यात अक्षम';
         return;
       }
+
       const decoder = new TextDecoder();
       let fullResponse = '';
+
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -238,6 +225,7 @@ class AIService {
       } finally {
         reader.releaseLock();
       }
+
       if (!fullResponse.trim()) {
         yield this.language === 'en'
           ? 'No response received from ZhipuAI. Please try again.'
@@ -246,12 +234,8 @@ class AIService {
     } catch (error) {
       console.error('ZhipuAI Error:', error);
       yield this.language === 'en'
-        ? `ZhipuAI Error: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`
-        : `झिपूएआय त्रुटी: ${
-            error instanceof Error ? error.message : 'अज्ञात त्रुटी'
-          }`;
+        ? `ZhipuAI Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        : `झिपूएआय त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`;
     }
   }
 
@@ -269,24 +253,23 @@ class AIService {
     }
 
     const apiMessages = [{ role: 'system', content: systemPrompt }, ...messages];
+
     try {
-      const response = await fetch(
-        'https://api.mistral.ai/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.settings.mistralApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: model === 'small' ? 'mistral-small-latest' : 'codestral-latest',
-            messages: apiMessages,
-            stream: true,
-            temperature: 0.7,
-            max_tokens: 8192,
-          }),
-        }
-      );
+      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.settings.mistralApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: model === 'small' ? 'mistral-small-latest' : 'codestral-latest',
+          messages: apiMessages,
+          stream: true,
+          temperature: 0.7,
+          max_tokens: 8192,
+        }),
+      });
+
       if (!response.ok) {
         const errorText = await response.text();
         yield this.language === 'en'
@@ -294,6 +277,7 @@ class AIService {
           : `मिस्ट्रल API त्रुटी: ${response.status} ${response.statusText}. ${errorText}`;
         return;
       }
+
       const reader = response.body?.getReader();
       if (!reader) {
         yield this.language === 'en'
@@ -301,8 +285,10 @@ class AIService {
           : 'त्रुटी: प्रतिसाद प्रवाह वाचण्यात अक्षम';
         return;
       }
+
       const decoder = new TextDecoder();
       let fullResponse = '';
+
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -330,6 +316,7 @@ class AIService {
       } finally {
         reader.releaseLock();
       }
+
       if (!fullResponse.trim()) {
         yield this.language === 'en'
           ? 'No response received from Mistral. Please try again.'
@@ -338,12 +325,8 @@ class AIService {
     } catch (error) {
       console.error('Mistral Error:', error);
       yield this.language === 'en'
-        ? `Mistral Error: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`
-        : `मिस्ट्रल त्रुटी: ${
-            error instanceof Error ? error.message : 'अज्ञात त्रुटी'
-          }`;
+        ? `Mistral Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        : `मिस्ट्रल त्रुटी: ${error instanceof Error ? error.message : 'अज्ञात त्रुटी'}`;
     }
   }
 
@@ -364,6 +347,7 @@ class AIService {
             temperature: 0.5,
           }),
         });
+
         if (!response.ok) throw new Error(`Mistral API error: ${response.statusText}`);
         const data = await response.json();
         return data.choices[0].message.content;
@@ -389,9 +373,8 @@ class AIService {
         'Google AI service not initialized. A Google API key is required to generate quizzes.'
       );
     }
-    
+
     const model = this.googleAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-    
     const conversationText = conversation.messages
       .map(m => `${m.role}: ${m.content}`)
       .join('\n\n');
@@ -399,14 +382,13 @@ class AIService {
     const prompt = `
       Based on the following conversation, create a multiple-choice quiz with 5 questions to test understanding of the key topics.
       The questions should be relevant to the main subjects discussed. For each question, provide 4 options and indicate the correct answer. Also, provide a brief explanation for why the answer is correct.
-
       Return the response as a valid JSON object only. Do not include any other text or markdown formatting.
       The JSON object should have a single key "questions", which is an array of objects.
       Each object in the array should have the following keys: "id", "question", "options", "answer", "explanation".
       The "id" should be a unique string.
       The "options" should be an array of 4 strings.
       The "answer" should be one of the strings from the "options" array.
-      
+
       Example format:
       {
         "questions": [
@@ -419,7 +401,6 @@ class AIService {
           }
         ]
       }
-
       Here is the conversation content:
       ---
       ${conversationText}
@@ -442,9 +423,8 @@ class AIService {
         questions: parsed.questions,
         createdAt: new Date(),
       };
-      
-      return studySession;
 
+      return studySession;
     } catch (error) {
       console.error("Error generating or parsing quiz:", error);
       throw new Error("Failed to generate a valid quiz. The AI's response might have been malformed.");
