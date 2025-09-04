@@ -108,9 +108,10 @@ class AIService {
         mergedMessages.push(currentMessage);
       }
 
-      // Prepend system prompt as the first user message
+      // Prepend system prompt and a priming response
       const contents: Content[] = [
         { role: 'user', parts: [{ text: systemPrompt }] },
+        { role: 'model', parts: [{ text: 'Understood. I will act as a helpful AI tutor.' }] },
         ...mergedMessages.map((msg) => ({
           role: msg.role === 'user' ? 'user' : 'model',
           parts: [{ text: msg.content }],
@@ -368,13 +369,12 @@ class AIService {
   }
 
   async generateQuiz(conversation: Conversation): Promise<StudySession> {
-    if (!this.googleAI) {
+    if (!this.settings?.mistralApiKey) {
       throw new Error(
-        'Google AI service not initialized. A Google API key is required to generate quizzes.'
+        'Mistral AI service not initialized. A Mistral API key is required to generate quizzes.'
       );
     }
 
-    const model = this.googleAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
     const conversationText = conversation.messages
       .map(m => `${m.role}: ${m.content}`)
       .join('\n\n');
@@ -408,8 +408,26 @@ class AIService {
     `;
 
     try {
-      const result = await model.generateContent(prompt);
-      const rawJson = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.settings.mistralApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'mistral-small-latest',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.5,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Mistral API Error: ${response.status} ${response.statusText}. ${errorText}`);
+      }
+
+      const data = await response.json();
+      const rawJson = data.choices[0].message.content;
       const parsed = JSON.parse(rawJson);
 
       if (!parsed.questions || !Array.isArray(parsed.questions)) {
