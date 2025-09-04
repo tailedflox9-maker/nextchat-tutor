@@ -101,7 +101,7 @@ class AIService {
     }
     try {
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemini-1.5-flash-latest', // Updated to flash for better speed
+        model: 'gemma-3-27b-it', // Updated to flash for better speed  
       });
 
       // Merge same-role messages
@@ -185,7 +185,7 @@ class AIService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'glm-4-flash', // Updated to flash model
+            model: 'glm-4.5-flash', // Updated to flash model
             messages: apiMessages,
             stream: true,
             temperature: 0.7,
