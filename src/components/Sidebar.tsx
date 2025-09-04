@@ -16,14 +16,16 @@ import {
   PinOff,
   Edit,
   Users,
-  Wand2
+  Wand2,
+  Book,
 } from 'lucide-react';
-import { Conversation } from '../types';
+import { Conversation, Note } from '../types';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { aiService } from '../services/aiService';
 
 interface SidebarProps {
   conversations: Conversation[];
+  notes: Note[];
   currentConversationId: string | null;
   onNewConversation: () => void;
   onNewPersonaConversation: (systemPrompt: string) => void;
@@ -31,6 +33,7 @@ interface SidebarProps {
   onDeleteConversation: (id: string) => void;
   onRenameConversation: (id: string, newTitle: string) => void;
   onTogglePinConversation: (id: string) => void;
+  onDeleteNote: (id: string) => void;
   onOpenSettings: () => void;
   settings: { selectedModel: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral' };
   onModelChange: (model: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral') => void;
@@ -41,6 +44,7 @@ interface SidebarProps {
 
 export function Sidebar({
   conversations,
+  notes,
   currentConversationId,
   onNewConversation,
   onNewPersonaConversation,
@@ -48,6 +52,7 @@ export function Sidebar({
   onDeleteConversation,
   onRenameConversation,
   onTogglePinConversation,
+  onDeleteNote,
   onOpenSettings,
   settings,
   onModelChange,
@@ -59,7 +64,7 @@ export function Sidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
-  const [view, setView] = useState<'chats' | 'personas'>('chats');
+  const [view, setView] = useState<'chats' | 'personas' | 'notes'>('chats');
   const [personaPrompt, setPersonaPrompt] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
 
@@ -72,6 +77,11 @@ export function Sidebar({
   
   const filteredConversations = conversations.filter(c =>
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredNotes = notes.filter(n =>
+    n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    n.content.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleStartEditing = (conversation: Conversation) => {
@@ -217,14 +227,14 @@ export function Sidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 border-t border-[var(--color-border)] mt-2 flex flex-col">
-        {view === 'chats' && !isFolded && (
+        {(view === 'chats' || view === 'notes') && !isFolded && (
           <div className="relative mb-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={selectedLanguage === 'en' ? 'Search chats...' : 'चॅट शोधा...'}
+              placeholder={selectedLanguage === 'en' ? `Search ${view}...` : `${view === 'chats' ? 'चॅट' : 'नोट्स'} शोधा...`}
               className="w-full bg-[var(--color-card)] border border-transparent focus:border-[var(--color-border)] rounded-lg pl-9 pr-3 py-1.5 text-sm placeholder:text-[var(--color-text-placeholder)] focus:outline-none transition-colors"
             />
           </div>
@@ -274,6 +284,22 @@ export function Sidebar({
                     </div>
                   </>
                 )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {view === 'notes' && !isFolded && (
+          <div className="space-y-1">
+            {filteredNotes.map((note) => (
+              <div key={note.id} className="group p-2.5 rounded-lg hover:bg-[var(--color-card)] text-[var(--color-text-primary)] cursor-pointer">
+                 <div className="flex items-start justify-between">
+                    <span className="flex-1 text-sm font-semibold truncate pr-2">{note.title}</span>
+                    <button onClick={() => onDeleteNote(note.id)} className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-900/30 text-red-400">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                 </div>
+                 <p className="text-xs text-[var(--color-text-secondary)] mt-1 truncate">{note.content}</p>
               </div>
             ))}
           </div>
@@ -329,6 +355,14 @@ export function Sidebar({
           >
             <Users className="w-5 h-5" />
             {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Personas' : 'Personas'}</span>}
+          </button>
+           <button
+            onClick={() => setView('notes')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${view === 'notes' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+            title={selectedLanguage === 'en' ? 'Notes' : 'नोट्स'}
+          >
+            <Book className="w-5 h-5" />
+            {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Notes' : 'नोट्स'}</span>}
           </button>
         </div>
       </div>
