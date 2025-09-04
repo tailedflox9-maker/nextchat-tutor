@@ -44,7 +44,7 @@ function App() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isQuizLoading, setIsQuizLoading] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Changed default to false
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const [studySession, setStudySession] = useState<StudySession | null>(null);
@@ -52,7 +52,25 @@ function App() {
 
   const { isInstallable, isInstalled, installApp, dismissInstallPrompt } = usePWA();
 
-  // --- START: Refactored useEffect hooks ---
+  // --- START: Responsive sidebar handling ---
+  useEffect(() => {
+    const handleResize = () => {
+      // Only auto-open sidebar on desktop (lg and above)
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+    
+    // Set initial state
+    handleResize();
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  // --- END: Responsive sidebar handling ---
+
   useEffect(() => {
     aiService.updateSettings(settings, selectedLanguage);
   }, [settings, selectedLanguage]);
@@ -66,15 +84,8 @@ function App() {
   }, [notes]);
 
   useEffect(() => {
-    const handleResize = () => setSidebarOpen(window.innerWidth >= 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
     localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded));
   }, [sidebarFolded]);
-  // --- END: Refactored useEffect hooks ---
 
   const handleModelChange = (model: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral') => {
     const newSettings = { ...settings, selectedModel: model };
@@ -90,19 +101,25 @@ function App() {
     setActiveView('chat');
     setCurrentConversationId(id);
     setCurrentNoteId(null);
-    if (window.innerWidth < 768) setSidebarOpen(false);
+    // Close sidebar on mobile after selection
+    if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
   const handleSelectNote = (id: string) => {
     setActiveView('note');
     setCurrentNoteId(id);
     setCurrentConversationId(null);
-    if (window.innerWidth < 768) setSidebarOpen(false);
+    // Close sidebar on mobile after selection
+    if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
   const handleNewConversation = () => {
     const newConversation: Conversation = {
-      id: generateId(), title: selectedLanguage === 'en' ? 'New Chat' : 'नवीन चॅट', messages: [], createdAt: new Date(), updatedAt: new Date(),
+      id: generateId(), 
+      title: selectedLanguage === 'en' ? 'New Chat' : 'नवीन चॅट', 
+      messages: [], 
+      createdAt: new Date(), 
+      updatedAt: new Date(),
     };
     setConversations(prev => [newConversation, ...prev]);
     handleSelectConversation(newConversation.id);
@@ -125,7 +142,12 @@ function App() {
   const handleSaveAsNote = (content: string) => {
     if (!currentConversationId) return;
     const newNote: Note = {
-      id: generateId(), title: generateConversationTitle(content), content, createdAt: new Date(), updatedAt: new Date(), sourceConversationId: currentConversationId,
+      id: generateId(), 
+      title: generateConversationTitle(content), 
+      content, 
+      createdAt: new Date(), 
+      updatedAt: new Date(), 
+      sourceConversationId: currentConversationId,
     };
     setNotes(prev => [newNote, ...prev]);
     alert("Note saved!");
@@ -135,7 +157,7 @@ function App() {
     setNotes(prev => prev.filter(n => n.id !== id));
     if(currentNoteId === id) {
       setCurrentNoteId(null);
-      setActiveView('chat'); // Revert to chat view if the active note is deleted
+      setActiveView('chat');
     }
   };
   
@@ -317,6 +339,7 @@ function App() {
       }
     }
   };
+
   const handleRenameConversation = (id: string, newTitle: string) => setConversations(prev => prev.map(c => (c.id === id ? { ...c, title: newTitle, updatedAt: new Date() } : c)));
   const handleTogglePinConversation = (id: string) => setConversations(prev => prev.map(c => (c.id === id ? { ...c, isPinned: !c.isPinned, updatedAt: new Date() } : c)));
   const handleSaveSettings = (newSettings: APISettings) => { setSettings(newSettings); storageUtils.saveSettings(newSettings); setSettingsOpen(false); };
@@ -331,57 +354,94 @@ function App() {
   const sortedNotes = useMemo(() => [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), [notes]);
 
   return (
-    <div className="h-[100dvh] flex bg-[var(--color-bg)] text-[var(--color-text-primary)] relative">
-      <Sidebar
-        conversations={sortedConversations}
-        notes={sortedNotes}
-        activeView={activeView}
-        currentConversationId={currentConversationId}
-        currentNoteId={currentNoteId}
-        onNewConversation={handleNewConversation}
-        onNewPersonaConversation={handleNewPersonaConversation}
-        onSelectConversation={handleSelectConversation}
-        onSelectNote={handleSelectNote}
-        onDeleteConversation={handleDeleteConversation}
-        onRenameConversation={handleRenameConversation}
-        onTogglePinConversation={handleTogglePinConversation}
-        onDeleteNote={handleDeleteNote}
-        onOpenSettings={() => setSettingsOpen(true)}
-        settings={settings}
-        onModelChange={handleModelChange}
-        onCloseSidebar={() => setSidebarOpen(false)}
-        isFolded={sidebarFolded}
-        onToggleFold={() => setSidebarFolded(!sidebarFolded)}
-        isSidebarOpen={sidebarOpen}
-      />
-
-      {!sidebarOpen && (
-        <button onClick={() => setSidebarOpen(true)} className="fixed top-4 left-4 p-2.5 bg-[var(--color-card)] rounded-lg z-50 shadow-md hover:bg-[var(--color-border)] transition-colors" title="Open sidebar">
-          <Menu className="w-6 h-6 text-[var(--color-text-secondary)]" />
-        </button>
-      )}
-
-      {activeView === 'chat' ? (
-        <ChatArea
-          conversation={currentConversation}
-          onSendMessage={handleSendMessage}
-          isLoading={isChatLoading}
-          isQuizLoading={isQuizLoading}
-          streamingMessage={streamingMessage}
-          hasApiKey={hasApiKey}
-          onStopGenerating={handleStopGenerating}
-          onSaveAsNote={handleSaveAsNote}
-          onGenerateQuiz={handleGenerateQuiz}
-          onEditMessage={handleEditMessage}
-          onRegenerateResponse={handleRegenerateResponse}
+    <div className="app-container">
+      {/* Mobile backdrop for sidebar */}
+      {sidebarOpen && window.innerWidth < 1024 && (
+        <div 
+          className="sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
         />
-      ) : (
-        <NoteView note={currentNote} />
       )}
 
-      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onSaveSettings={handleSaveSettings} isSidebarFolded={sidebarFolded} isSidebarOpen={sidebarOpen} />
-      <QuizModal isOpen={isQuizModalOpen} onClose={() => setIsQuizModalOpen(false)} session={studySession} />
-      {isInstallable && !isInstalled && <InstallPrompt onInstall={handleInstallApp} onDismiss={dismissInstallPrompt} />}
+      {/* Sidebar */}
+      <div className={`sidebar ${sidebarFolded ? 'sidebar-folded' : ''} ${sidebarOpen ? 'sidebar-open' : ''}`}>
+        <Sidebar
+          conversations={sortedConversations}
+          notes={sortedNotes}
+          activeView={activeView}
+          currentConversationId={currentConversationId}
+          currentNoteId={currentNoteId}
+          onNewConversation={handleNewConversation}
+          onNewPersonaConversation={handleNewPersonaConversation}
+          onSelectConversation={handleSelectConversation}
+          onSelectNote={handleSelectNote}
+          onDeleteConversation={handleDeleteConversation}
+          onRenameConversation={handleRenameConversation}
+          onTogglePinConversation={handleTogglePinConversation}
+          onDeleteNote={handleDeleteNote}
+          onOpenSettings={() => setSettingsOpen(true)}
+          settings={settings}
+          onModelChange={handleModelChange}
+          onCloseSidebar={() => setSidebarOpen(false)}
+          isFolded={sidebarFolded}
+          onToggleFold={() => setSidebarFolded(!sidebarFolded)}
+          isSidebarOpen={sidebarOpen}
+        />
+      </div>
+
+      {/* Main Content Area */}
+      <div className="main-content">
+        {/* Mobile menu button */}
+        {!sidebarOpen && (
+          <button 
+            onClick={() => setSidebarOpen(true)} 
+            className="mobile-menu-button interactive-button p-2.5 bg-[var(--color-card)] rounded-lg shadow-md hover:bg-[var(--color-border)] transition-colors lg:hidden" 
+            title="Open sidebar"
+            aria-label="Open sidebar"
+          >
+            <Menu className="w-6 h-6 text-[var(--color-text-secondary)]" />
+          </button>
+        )}
+
+        {activeView === 'chat' ? (
+          <ChatArea
+            conversation={currentConversation}
+            onSendMessage={handleSendMessage}
+            isLoading={isChatLoading}
+            isQuizLoading={isQuizLoading}
+            streamingMessage={streamingMessage}
+            hasApiKey={hasApiKey}
+            onStopGenerating={handleStopGenerating}
+            onSaveAsNote={handleSaveAsNote}
+            onGenerateQuiz={handleGenerateQuiz}
+            onEditMessage={handleEditMessage}
+            onRegenerateResponse={handleRegenerateResponse}
+          />
+        ) : (
+          <NoteView note={currentNote} />
+        )}
+      </div>
+
+      {/* Modals */}
+      <SettingsModal 
+        isOpen={settingsOpen} 
+        onClose={() => setSettingsOpen(false)} 
+        settings={settings} 
+        onSaveSettings={handleSaveSettings} 
+        isSidebarFolded={sidebarFolded} 
+        isSidebarOpen={sidebarOpen} 
+      />
+      <QuizModal 
+        isOpen={isQuizModalOpen} 
+        onClose={() => setIsQuizModalOpen(false)} 
+        session={studySession} 
+      />
+      {isInstallable && !isInstalled && (
+        <InstallPrompt 
+          onInstall={handleInstallApp} 
+          onDismiss={dismissInstallPrompt} 
+        />
+      )}
     </div>
   );
 }
