@@ -10,7 +10,7 @@ import { aiService } from './services/aiService';
 import { storageUtils } from './utils/storage';
 import { generateId, generateConversationTitle } from './utils/helpers';
 import { usePWA } from './hooks/usePWA';
-import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { LanguageContext } from './contexts/LanguageContext';
 
 type ActiveView = 'chat' | 'note';
@@ -382,22 +382,10 @@ function App() {
         settings={settings}
         onModelChange={handleModelChange}
         onCloseSidebar={() => setSidebarOpen(false)}
+        isFolded={sidebarFolded}
+        onToggleFold={() => setSidebarFolded(!sidebarFolded)}
         isSidebarOpen={sidebarOpen}
       />
-
-      {/* Desktop Sidebar Toggle Button */}
-      <button
-        onClick={() => setSidebarFolded(!sidebarFolded)}
-        className="hidden lg:flex items-center justify-center absolute top-1/2 z-30 w-6 h-24 bg-[var(--color-sidebar)] hover:bg-[var(--color-card)] border-y border-r border-[var(--color-border)] rounded-r-md text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        style={{
-          left: sidebarFolded ? '4rem' : '16rem',
-          transform: 'translateX(-50%) translateY(-50%)',
-        }}
-        title={sidebarFolded ? "Expand sidebar" : "Collapse sidebar"}
-        aria-label={sidebarFolded ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        {sidebarFolded ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-      </button>
 
       {/* Main Content Area */}
       <div className="main-content">
