@@ -3,7 +3,7 @@ import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { InstallPrompt } from './components/InstallPrompt';
 import { SettingsModal } from './components/SettingsModal';
-import { Conversation, Message, APISettings } from './types';
+import { Conversation, Message, APISettings, Note } from './types';
 import { aiService } from './services/aiService';
 import { storageUtils } from './utils/storage';
 import { generateId, generateConversationTitle } from './utils/helpers';
@@ -23,8 +23,10 @@ function App() {
 
   // --- START: Synchronous state initialization from localStorage to prevent UI flash ---
   const [initialConversations] = useState(() => storageUtils.getConversations());
+  const [initialNotes] = useState(() => storageUtils.getNotes());
 
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
+  const [notes, setNotes] = useState<Note[]>(initialNotes);
   const [settings, setSettings] = useState<APISettings>(() => storageUtils.getSettings());
   
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(() => {
@@ -64,6 +66,11 @@ function App() {
     // Save conversations to localStorage whenever they are modified.
     storageUtils.saveConversations(conversations);
   }, [conversations]);
+  
+  useEffect(() => {
+    // Save notes to localStorage whenever they are modified.
+    storageUtils.saveNotes(notes);
+  }, [notes]);
 
   useEffect(() => {
     // Handle window resize for sidebar visibility.
@@ -176,6 +183,38 @@ function App() {
     if (success) {
       console.log('App installed successfully');
     }
+  };
+
+  const handleSaveAsNote = (content: string) => {
+    if (!currentConversationId) return;
+    const newNote: Note = {
+      id: generateId(),
+      title: generateConversationTitle(content),
+      content: content,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      sourceConversationId: currentConversationId,
+    };
+    setNotes(prev => [newNote, ...prev]);
+    // Optionally, show a toast notification here
+    alert("Note saved!");
+  };
+
+  const handleDeleteNote = (id: string) => {
+    setNotes(prev => prev.filter(n => n.id !== id));
+  };
+  
+  const handleGenerateStudySession = async (type: 'quiz' | 'flashcards') => {
+    if (!currentConversation) return;
+
+    // A real implementation would call aiService to generate questions
+    // For now, we'll use a placeholder.
+    alert(`Generating ${type} for "${currentConversation.title}"... (This is a placeholder)`);
+
+    // Example of what would happen after AI responds:
+    // const session = await aiService.generateStudySession(currentConversation, type);
+    // setStudySession(session);
+    // setIsStudyModalOpen(true);
   };
 
   const handleSendMessage = async (content: string) => {
@@ -399,12 +438,17 @@ function App() {
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
   }, [conversations]);
+  
+  const sortedNotes = useMemo(() => {
+    return [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }, [notes]);
 
   return (
     <div className="h-[100dvh] flex bg-[var(--color-bg)] text-[var(--color-text-primary)] relative">
       {sidebarOpen && (
         <Sidebar
           conversations={sortedConversations}
+          notes={sortedNotes}
           currentConversationId={currentConversationId}
           onNewConversation={handleNewConversation}
           onNewPersonaConversation={handleNewPersonaConversation}
@@ -412,6 +456,7 @@ function App() {
           onDeleteConversation={handleDeleteConversation}
           onRenameConversation={handleRenameConversation}
           onTogglePinConversation={handleTogglePinConversation}
+          onDeleteNote={handleDeleteNote}
           onOpenSettings={handleOpenSettings}
           settings={settings}
           onModelChange={handleModelChange}
@@ -441,6 +486,8 @@ function App() {
         onEditMessage={handleEditMessage}
         onRegenerateResponse={handleRegenerateResponse}
         onStopGenerating={handleStopGenerating}
+        onSaveAsNote={handleSaveAsNote}
+        onGenerateStudySession={handleGenerateStudySession}
       />
 
       <SettingsModal
