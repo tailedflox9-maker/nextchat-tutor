@@ -1,4 +1,4 @@
-import React, a/src/App.tsx
+import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { NoteView } from './components/NoteView';
@@ -8,7 +8,7 @@ import { QuizModal } from './components/QuizModal';
 import { Conversation, Message, APISettings, Note, StudySession } from './types';
 import { aiService } from './services/aiService';
 import { storageUtils } from './utils/storage';
-import { generateId, generateConversationTitle } from './utils/helpers'; 
+import { generateId, generateConversationTitle } from './utils/helpers';
 import { usePWA } from './hooks/usePWA';
 import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LanguageContext } from './contexts/LanguageContext';
