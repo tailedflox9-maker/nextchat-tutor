@@ -129,9 +129,6 @@ export function Sidebar({
     }
   };
 
-  // ========== THE FIX IS HERE ==========
-  // We combine the width classes and sidebar classes into one element.
-  // The outer div is removed.
   const sidebarClasses = `${isFolded ? 'w-16' : 'w-64'} bg-[var(--color-sidebar)] flex flex-col h-full border-r border-[var(--color-border)] sidebar transition-all duration-300 ease-in-out fixed lg:static z-50 ${isSidebarOpen ? '' : 'hidden lg:flex'}`;
 
   return (
@@ -205,7 +202,6 @@ export function Sidebar({
           </div>
         )}
 
-        {/* The rest of the component content remains exactly the same... */}
         {view === 'chats' && (
           <div className="space-y-1">
             {filteredConversations.length > 0 ? filteredConversations.map((conversation) => (
@@ -285,6 +281,19 @@ export function Sidebar({
            <button onClick={() => setView('personas')} className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${view === 'personas' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}><Users className="w-5 h-5" />{!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Personas' : 'Personas'}</span>}</button>
            <button onClick={() => setView('notes')} className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${view === 'notes' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}><Book className="w-5 h-5" />{!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Notes' : 'नोट्स'}</span>}</button>
         </div>
+        
+        {!isFolded && (
+          <div className="mt-2 text-center">
+            <a 
+              href="https://tanmay-kalbande.github.io/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            >
+              Developed by Tanmay Kalbande
+            </a>
+          </div>
+        )}
       </div>
     </aside>
   );
