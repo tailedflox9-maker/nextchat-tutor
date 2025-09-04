@@ -161,11 +161,26 @@ function App() {
     }
   };
   
+  // ==========================================================
+  // START: CORRECTED QUIZ FUNCTION
+  // ==========================================================
   const handleGenerateQuiz = async () => {
-    if (!currentConversation) return;
+    // Find the absolute latest version of the conversation from state
+    const conversation = conversations.find(c => c.id === currentConversationId);
+    if (!conversation) return;
+
     setIsQuizLoading(true);
     try {
-      const session = await aiService.generateQuiz(currentConversation);
+      // Create a clean array of messages, just like we do for sending a message.
+      // This removes all extra metadata (like Date objects) that can confuse the AI.
+      const messagesForQuiz = conversation.messages.map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      // Pass the clean message array to the service
+      const session = await aiService.generateQuiz(messagesForQuiz);
+      
       setStudySession(session);
       setIsQuizModalOpen(true);
     } catch (error) {
@@ -175,6 +190,9 @@ function App() {
       setIsQuizLoading(false);
     }
   };
+  // ==========================================================
+  // END: CORRECTED QUIZ FUNCTION
+  // ==========================================================
 
   const handleSendMessage = async (content: string) => {
     if (!hasApiKey) {
@@ -355,39 +373,29 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Mobile backdrop for sidebar */}
-      {sidebarOpen && window.innerWidth < 1024 && (
-        <div 
-          className="sidebar-backdrop"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div className={`sidebar ${sidebarFolded ? 'sidebar-folded' : ''} ${sidebarOpen ? 'sidebar-open' : ''}`}>
-        <Sidebar
-          conversations={sortedConversations}
-          notes={sortedNotes}
-          activeView={activeView}
-          currentConversationId={currentConversationId}
-          currentNoteId={currentNoteId}
-          onNewConversation={handleNewConversation}
-          onNewPersonaConversation={handleNewPersonaConversation}
-          onSelectConversation={handleSelectConversation}
-          onSelectNote={handleSelectNote}
-          onDeleteConversation={handleDeleteConversation}
-          onRenameConversation={handleRenameConversation}
-          onTogglePinConversation={handleTogglePinConversation}
-          onDeleteNote={handleDeleteNote}
-          onOpenSettings={() => setSettingsOpen(true)}
-          settings={settings}
-          onModelChange={handleModelChange}
-          onCloseSidebar={() => setSidebarOpen(false)}
-          isFolded={sidebarFolded}
-          onToggleFold={() => setSidebarFolded(!sidebarFolded)}
-          isSidebarOpen={sidebarOpen}
-        />
-      </div>
+      {/* Sidebar Component */}
+      <Sidebar
+        conversations={sortedConversations}
+        notes={sortedNotes}
+        activeView={activeView}
+        currentConversationId={currentConversationId}
+        currentNoteId={currentNoteId}
+        onNewConversation={handleNewConversation}
+        onNewPersonaConversation={handleNewPersonaConversation}
+        onSelectConversation={handleSelectConversation}
+        onSelectNote={handleSelectNote}
+        onDeleteConversation={handleDeleteConversation}
+        onRenameConversation={handleRenameConversation}
+        onTogglePinConversation={handleTogglePinConversation}
+        onDeleteNote={handleDeleteNote}
+        onOpenSettings={() => setSettingsOpen(true)}
+        settings={settings}
+        onModelChange={handleModelChange}
+        onCloseSidebar={() => setSidebarOpen(false)}
+        isFolded={sidebarFolded}
+        onToggleFold={() => setSidebarFolded(!sidebarFolded)}
+        isSidebarOpen={sidebarOpen}
+      />
 
       {/* Main Content Area */}
       <div className="main-content">
