@@ -17,6 +17,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     localStorage.setItem('ai-tutor-language', selectedLanguage);
+    // Update the document language for accessibility and CSS
+    document.documentElement.lang = selectedLanguage;
+    document.body.dataset.lang = selectedLanguage;
   }, [selectedLanguage]);
 
   return (
