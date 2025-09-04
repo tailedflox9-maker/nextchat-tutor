@@ -84,7 +84,7 @@ function App() {
 
   const currentConversation = useMemo(() => conversations.find(c => c.id === currentConversationId), [conversations, currentConversationId]);
   const currentNote = useMemo(() => notes.find(n => n.id === currentNoteId), [notes, currentNoteId]);
-  const hasApiKey = settings.googleApiKey || settings.zhipuApiKey || settings.mistralApiKey;
+  const hasApiKey = !!(settings.googleApiKey || settings.zhipuApiKey || settings.mistralApiKey);
 
   const handleSelectConversation = (id: string) => {
     setActiveView('chat');
@@ -160,43 +160,26 @@ function App() {
       return;
     }
     
-    // If user sends a message while viewing a note, start a new chat.
-    if(activeView === 'note') {
-      setActiveView('chat');
-      setCurrentNoteId(null);
-      // Create a new conversation and proceed
-      const newConv: Conversation = { id: generateId(), title: generateConversationTitle(content), messages: [], createdAt: new Date(), updatedAt: new Date() };
-      setConversations(prev => [newConv, ...prev]);
-      setCurrentConversationId(newConv.id);
-      
-      // We need to return here and let the state update trigger the rest of the logic in a useEffect or handle it differently.
-      // For simplicity, we'll just set the state and proceed, but a more robust solution might handle this transition more gracefully.
-    }
-
-    let conversationToUpdate = currentConversation;
     let targetConversationId = currentConversationId;
 
-    if (!conversationToUpdate) {
-      const newConversation: Conversation = {
-        id: generateId(), title: generateConversationTitle(content), messages: [], createdAt: new Date(), updatedAt: new Date(),
-      };
-      setConversations(prev => [newConversation, ...prev]);
-      conversationToUpdate = newConversation;
-      targetConversationId = newConversation.id;
-      setCurrentConversationId(newConversation.id);
+    if (activeView === 'note' || !targetConversationId) {
+      const newConv: Conversation = { id: generateId(), title: generateConversationTitle(content), messages: [], createdAt: new Date(), updatedAt: new Date() };
+      setConversations(prev => [newConv, ...prev]);
+      targetConversationId = newConv.id;
+      handleSelectConversation(newConv.id);
     }
 
     const userMessage: Message = { id: generateId(), content, role: 'user', timestamp: new Date() };
     
-    const updatedConversations = conversations.map(conv => {
+    setConversations(prev => prev.map(conv => {
       if (conv.id === targetConversationId) {
         return { ...conv, title: conv.messages.length === 0 && !conv.isPersona ? generateConversationTitle(content) : conv.title, messages: [...conv.messages, userMessage], updatedAt: new Date() };
       }
       return conv;
-    });
-    setConversations(updatedConversations);
+    }));
 
-    const convForApi = updatedConversations.find(c => c.id === targetConversationId)!;
+    const convForApi = conversations.find(c => c.id === targetConversationId);
+    if (!convForApi) return; // Should not happen
 
     setIsChatLoading(true);
     stopStreamingRef.current = false;
@@ -205,7 +188,7 @@ function App() {
       setStreamingMessage(assistantMessage);
 
       let fullResponse = '';
-      const messagesForApi = convForApi.messages.map(m => ({ role: m.role, content: m.content }));
+      const messagesForApi = [...convForApi.messages, userMessage].map(m => ({ role: m.role, content: m.content }));
       
       for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage, convForApi.systemPrompt)) {
         if (stopStreamingRef.current) break;
@@ -214,11 +197,11 @@ function App() {
       }
 
       const finalAssistantMessage: Message = { ...assistantMessage, content: fullResponse };
-      setConversations(prev => prev.map(conv => conv.id === targetConversationId ? { ...conv, messages: [...conv.messages, finalAssistantMessage], updatedAt: new Date() } : conv));
+      setConversations(prev => prev.map(conv => conv.id === targetConversationId ? { ...conv, messages: [...conv.messages.filter(m => m.id !== userMessage.id), userMessage, finalAssistantMessage], updatedAt: new Date() } : conv));
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = { id: generateId(), content: `Sorry, an error occurred. Error: ${error instanceof Error ? error.message : 'Unknown error'}`, role: 'assistant', timestamp: new Date() };
-      setConversations(prev => prev.map(conv => conv.id === targetConversationId ? { ...conv, messages: [...conv.messages, errorMessage] } : conv));
+      setConversations(prev => prev.map(conv => conv.id === targetConversationId ? { ...conv, messages: [...conv.messages.filter(m => m.id !== userMessage.id), userMessage, errorMessage] } : conv));
     } finally {
       setStreamingMessage(null);
       setIsChatLoading(false);
@@ -246,9 +229,9 @@ function App() {
     if (!conversation) return;
 
     const messageIndex = conversation.messages.findIndex(m => m.id === messageId);
-    if (messageIndex === -1) return;
+    if (messageIndex === -1 || conversation.messages[messageIndex].role !== 'assistant') return;
 
-    // We only regenerate based on the history *before* the message to be replaced.
+    // Correct: History includes the user message that prompted this assistant response
     const history = conversation.messages.slice(0, messageIndex);
     const messagesForApi = history.map(m => ({ role: m.role, content: m.content }));
 
@@ -289,7 +272,7 @@ function App() {
   const handleDeleteConversation = (id: string) => {
     setConversations(prev => prev.filter(c => c.id !== id));
     if (currentConversationId === id) {
-      const remaining = conversations.filter(c => c.id !== id);
+      const remaining = sortedConversations.filter(c => c.id !== id);
       const newId = remaining.length > 0 ? remaining[0].id : null;
       if (newId) {
         handleSelectConversation(newId)
