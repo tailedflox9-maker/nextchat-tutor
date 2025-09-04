@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Smile, Sparkles, Copy, Check, Edit2, RefreshCcw, Save, X } from 'lucide-react';
+import { Smile, Sparkles, Copy, Check, Edit2, RefreshCcw, Save, X, Bookmark, Download } from 'lucide-react';
 import { Message } from '../types';
 import { LanguageContext } from '../contexts/LanguageContext';
 
@@ -13,6 +13,7 @@ interface MessageBubbleProps {
   model?: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral';
   onEditMessage?: (messageId: string, newContent: string) => void;
   onRegenerateResponse?: (messageId: string) => void;
+  onSaveAsNote?: (content: string) => void;
 }
 
 const modelNames = {
@@ -84,14 +85,20 @@ const ActionButtons = React.memo(({
   onRegenerate,
   onEdit,
   onCopy,
+  onSaveNote,
+  onExport,
   copied,
+  noteSaved,
   selectedLanguage 
 }: {
   isUser: boolean;
   onRegenerate?: () => void;
   onEdit: () => void;
   onCopy: () => void;
+  onSaveNote: () => void;
+  onExport: () => void;
   copied: boolean;
+  noteSaved: boolean;
   selectedLanguage: 'en' | 'mr';
 }) => (
   <div className="absolute -bottom-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200">
@@ -103,6 +110,15 @@ const ActionButtons = React.memo(({
           title={selectedLanguage === 'en' ? 'Regenerate response' : 'प्रतिसाद पुन्हा तयार करा'}
         >
           <RefreshCcw className="w-4 h-4" />
+        </button>
+      )}
+      {!isUser && (
+         <button
+          onClick={onSaveNote}
+          className={`transition-colors p-1 rounded hover:bg-[var(--color-border)] ${noteSaved ? 'text-blue-400' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+          title={selectedLanguage === 'en' ? 'Save as Note' : 'टीप म्हणून जतन करा'}
+        >
+          <Bookmark className="w-4 h-4" />
         </button>
       )}
       <button
@@ -119,6 +135,15 @@ const ActionButtons = React.memo(({
       >
         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
       </button>
+       {!isUser && (
+        <button
+          onClick={onExport}
+          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)]"
+          title={selectedLanguage === 'en' ? 'Export as Markdown' : 'मार्कडाउन म्हणून निर्यात करा'}
+        >
+          <Download className="w-4 h-4" />
+        </button>
+      )}
     </div>
   </div>
 ));
@@ -128,11 +153,13 @@ export function MessageBubble({
   isStreaming = false,
   model,
   onEditMessage,
-  onRegenerateResponse
+  onRegenerateResponse,
+  onSaveAsNote,
 }: MessageBubbleProps) {
   const { selectedLanguage } = useContext(LanguageContext);
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
+  const [noteSaved, setNoteSaved] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isEditing, setIsEditing] = useState(message.isEditing || false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -156,6 +183,26 @@ export function MessageBubble({
       console.error('Failed to copy text:', error);
     }
   }, [message.content]);
+  
+  const handleSaveNote = useCallback(() => {
+    if (onSaveAsNote) {
+      onSaveAsNote(message.content);
+      setNoteSaved(true);
+      setTimeout(() => setNoteSaved(false), 2500); // Visual feedback for 2.5s
+    }
+  }, [message.content, onSaveAsNote]);
+
+  const handleExport = useCallback(() => {
+    const blob = new Blob([message.content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-tutor-response-${message.id}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [message.content, message.id]);
 
   const handleEdit = useCallback(() => {
     setIsEditing(true);
@@ -315,7 +362,10 @@ export function MessageBubble({
             onRegenerate={onRegenerateResponse ? handleRegenerate : undefined}
             onEdit={handleEdit}
             onCopy={handleCopy}
+            onSaveNote={handleSaveNote}
+            onExport={handleExport}
             copied={copied}
+            noteSaved={noteSaved}
             selectedLanguage={selectedLanguage}
           />
         )}
