@@ -26,8 +26,6 @@ interface SidebarProps {
   onModelChange: (model: any) => void;
   onCloseSidebar: () => void;
   isSidebarOpen: boolean;
-  isFolded?: boolean;
-  onToggleFold?: () => void;
 }
 
 export function Sidebar({
@@ -48,8 +46,6 @@ export function Sidebar({
   settings,
   onModelChange,
   onCloseSidebar,
-  isFolded = false,
-  onToggleFold,
   isSidebarOpen
 }: SidebarProps) {
   const { selectedLanguage } = useContext(LanguageContext);
@@ -65,6 +61,9 @@ export function Sidebar({
     { id: 'mistral-small', icon: Cloud, name: 'Mistral' },
     { id: 'mistral-codestral', icon: Terminal, name: 'Codestral' },
   ];
+
+  // Determine if the sidebar is folded based on isSidebarOpen state on mobile
+  const isFolded = window.innerWidth < 1024 ? false : (localStorage.getItem('ai-tutor-sidebar-folded') === 'true');
 
   const filteredConversations = useMemo(() => {
     return conversations
@@ -144,11 +143,6 @@ export function Sidebar({
             <button onClick={onOpenSettings} className="p-2.5 text-gray-200 hover:text-white hover:bg-[var(--color-card)] rounded-lg transition-colors" title={selectedLanguage === 'en' ? 'Settings' : 'सेटिंग्ज'}>
               <Settings className="w-6 h-6" />
             </button>
-            {onToggleFold && (
-              <button onClick={onToggleFold} className="p-2.5 text-gray-200 hover:text-white hover:bg-[var(--color-card)] rounded-lg transition-colors hidden lg:block" title={isFolded ? 'Expand' : 'Collapse'}>
-                {isFolded ? <ChevronRight className="w-6 h-6" /> : <ChevronLeft className="w-6 h-6" />}
-              </button>
-            )}
             <button onClick={onCloseSidebar} className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors lg:hidden" title={selectedLanguage === 'en' ? 'Close sidebar' : 'साइडबार बंद करा'}>
               <X className="w-5 h-5" />
             </button>
