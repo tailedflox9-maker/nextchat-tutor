@@ -2,8 +2,7 @@
    FILE: src/index.css - FIXED RESPONSIVE VERSION
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Biryani:wght@200;300;400;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Marathi:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Palanquin+Dark:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
@@ -31,7 +30,7 @@
     --color-accent-text: #0A0A0A;
     --color-accent-bg-hover: #F0F0F0;
     --font-weight: 500;
-    --font-marathi: 'Biryani', sans-serif;
+    --font-marathi: 'Palanquin Dark', sans-serif;
     --font-english: 'Inter', sans-serif;
   }
   
@@ -61,7 +60,7 @@
   [lang="mr"] {
     font-family: var(--font-marathi) !important;
     font-weight: 600 !important;
-    font-size: 1.15em !important;
+    /* REMOVED font-size: 1.15em !important; to fix zoom issue */
     line-height: 1.7 !important;
     letter-spacing: 0.01em !important;
     text-rendering: optimizeLegibility;
