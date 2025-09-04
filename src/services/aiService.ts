@@ -368,86 +368,70 @@ class AIService {
     );
   }
 
-  async generateQuiz(conversation: Conversation): Promise<StudySession> {
-    if (!this.settings?.mistralApiKey) {
-      throw new Error(
-        'Mistral AI service not initialized. A Mistral API key is required to generate quizzes.'
-      );
-    }
-
-    const conversationText = conversation.messages
-      .map(m => `${m.role}: ${m.content}`)
-      .join('\n\n');
-
-    const prompt = `
-      Based on the following conversation, create a multiple-choice quiz with 5 questions to test understanding of the key topics.
-      The questions should be relevant to the main subjects discussed. For each question, provide 4 options and indicate the correct answer. Also, provide a brief explanation for why the answer is correct.
-      Return the response as a valid JSON object only. Do not include any other text or markdown formatting.
-      The JSON object should have a single key "questions", which is an array of objects.
-      Each object in the array should have the following keys: "id", "question", "options", "answer", "explanation".
-      The "id" should be a unique string.
-      The "options" should be an array of 4 strings.
-      The "answer" should be one of the strings from the "options" array.
-
-      Example format:
-      {
-        "questions": [
-          {
-            "id": "q1",
-            "question": "What is the capital of France?",
-            "options": ["Berlin", "Madrid", "Paris", "Rome"],
-            "answer": "Paris",
-            "explanation": "Paris has been the capital of France since the 10th century."
-          }
-        ]
-      }
-      Here is the conversation content:
-      ---
-      ${conversationText}
-      ---
-    `;
-
-    try {
-      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.settings.mistralApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'mistral-small-latest',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.5,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Mistral API Error: ${response.status} ${response.statusText}. ${errorText}`);
-      }
-
-      const data = await response.json();
-      const rawJson = data.choices[0].message.content;
-      const parsed = JSON.parse(rawJson);
-
-      if (!parsed.questions || !Array.isArray(parsed.questions)) {
-        throw new Error('AI returned invalid quiz format.');
-      }
-
-      const studySession: StudySession = {
-        id: `quiz-${conversation.id}`,
-        conversationId: conversation.id,
-        type: 'quiz',
-        questions: parsed.questions,
-        createdAt: new Date(),
-      };
-
-      return studySession;
-    } catch (error) {
-      console.error("Error generating or parsing quiz:", error);
-      throw new Error("Failed to generate a valid quiz. The AI's response might have been malformed.");
-    }
+async generateQuiz(conversation: Conversation): Promise<StudySession> {
+  if (!this.googleAI) {
+    throw new Error(
+      'Google AI service not initialized. A Google API key is required to generate quizzes.'
+    );
   }
+
+  const model = this.googleAI.getGenerativeModel({ model: 'gemma-3-27b-it' });
+
+  const conversationText = conversation.messages
+    .map(m => `${m.role}: ${m.content}`)
+    .join('\n\n');
+
+  const prompt = `
+    Based on the following conversation, create a multiple-choice quiz with 5 questions to test understanding of the key topics.
+    The questions should be relevant to the main subjects discussed. For each question, provide 4 options and indicate the correct answer. Also, provide a brief explanation for why the answer is correct.
+    Return the response as a valid JSON object only. Do not include any other text or markdown formatting.
+    The JSON object should have a single key "questions", which is an array of objects.
+    Each object in the array should have the following keys: "id", "question", "options", "answer", "explanation".
+    The "id" should be a unique string.
+    The "options" should be an array of 4 strings.
+    The "answer" should be one of the strings from the "options" array.
+
+    Example format:
+    {
+      "questions": [
+        {
+          "id": "q1",
+          "question": "What is the capital of France?",
+          "options": ["Berlin", "Madrid", "Paris", "Rome"],
+          "answer": "Paris",
+          "explanation": "Paris has been the capital of France since the 10th century."
+        }
+      ]
+    }
+    Here is the conversation content:
+    ---
+    ${conversationText}
+    ---
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const rawJson = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(rawJson);
+
+    if (!parsed.questions || !Array.isArray(parsed.questions)) {
+      throw new Error('AI returned invalid quiz format.');
+    }
+
+    const studySession: StudySession = {
+      id: `quiz-${conversation.id}`,
+      conversationId: conversation.id,
+      type: 'quiz',
+      questions: parsed.questions,
+      createdAt: new Date(),
+    };
+
+    return studySession;
+  } catch (error) {
+    console.error("Error generating or parsing quiz:", error);
+    throw new Error("Failed to generate a valid quiz. The AI's response might have been malformed.");
+  }
+}
 }
 
 export const aiService = new AIService();
