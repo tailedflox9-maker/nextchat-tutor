@@ -1,15 +1,26 @@
 import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
-import { Send, PlusCircle, Square } from 'lucide-react';
+import { Send, PlusCircle, Square, ClipboardCheck, Loader2 } from 'lucide-react';
 import { LanguageContext } from '../contexts/LanguageContext';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
+  isQuizLoading: boolean;
   disabled?: boolean;
   onStopGenerating: () => void;
+  onGenerateQuiz: () => void;
+  canGenerateQuiz: boolean;
 }
 
-export function ChatInput({ onSendMessage, isLoading, disabled = false, onStopGenerating }: ChatInputProps) {
+export function ChatInput({ 
+  onSendMessage, 
+  isLoading, 
+  isQuizLoading,
+  disabled = false, 
+  onStopGenerating,
+  onGenerateQuiz,
+  canGenerateQuiz
+}: ChatInputProps) {
   const { selectedLanguage } = useContext(LanguageContext);
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -109,14 +120,27 @@ export function ChatInput({ onSendMessage, isLoading, disabled = false, onStopGe
             rows={1}
             style={{ scrollbarWidth: 'none' }}
           />
-          <div className="self-stretch flex items-end pb-0.5">
+          <div className="self-stretch flex items-end pb-0.5 gap-1">
+            <button
+              type="button"
+              onClick={onGenerateQuiz}
+              disabled={!canGenerateQuiz || isQuizLoading || isLoading}
+              className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200 transform ${
+                !canGenerateQuiz || isQuizLoading || isLoading
+                  ? 'bg-transparent text-[var(--color-text-placeholder)] cursor-not-allowed scale-95'
+                  : 'bg-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] scale-100 hover:scale-105 active:scale-95'
+              }`}
+              title={selectedLanguage === 'en' ? 'Generate Quiz' : 'प्रश्नोत्तरी तयार करा'}
+            >
+              {isQuizLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
+            </button>
             <button
               type="submit"
               disabled={!canSend || isLoading}
               className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200 transform ${
                 !canSend || isLoading
                   ? 'bg-transparent text-[var(--color-text-placeholder)] cursor-not-allowed scale-95'
-                  : 'bg-[var(--color-text-primary)] text-[var(--color-bg)] hover:bg-[var(--color-accent-bg-hover)] scale-100 hover:scale-105 active:scale-95'
+                  : 'bg-[var(--color-accent-bg)] text-[var(--color-bg)] hover:bg-[var(--color-accent-bg-hover)] scale-100 hover:scale-105 active:scale-95'
               }`}
               title={selectedLanguage === 'en' ? 'Send message' : 'संदेश पाठवा'}
             >
