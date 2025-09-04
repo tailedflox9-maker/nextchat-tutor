@@ -100,11 +100,13 @@ class AIService {
       return;
     }
     try {
+      // RECOMMENDED CHANGE: Use the same modern, fast model as other functions.
+      // This model correctly supports `systemInstruction`.
       const model = this.googleAI.getGenerativeModel({
-        model: 'gemma-3-27b-it', // Updated to flash for better speed  
+        model: 'gemini-1.5-flash-latest', 
       });
 
-      // Merge same-role messages
+      // Merge consecutive same-role messages for a cleaner history
       const mergedMessages: Array<{ role: string; content: string }> = [];
       if (messages.length > 0) {
         let currentMessage = { ...messages[0] };
@@ -128,7 +130,7 @@ class AIService {
       
       const result = await model.generateContentStream({ 
         contents,
-        // Using systemInstruction is preferred for newer models
+        // Using `systemInstruction` is the preferred and more robust method for Gemini models.
         systemInstruction: {
           role: 'system',
           parts: [{ text: systemPrompt }]
