@@ -223,30 +223,30 @@
     position: relative;
   }
 
-/* --- SIDEBAR RESPONSIVE FIXES --- */
-.sidebar {
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: translateZ(0);
-  flex-shrink: 0;
-  height: 100vh;
-  height: 100dvh;
-  position: relative;
-  z-index: 20;
-  overflow: hidden; /* Prevent content overflow in folded state */
-}
-
-/* Desktop sidebar */
-@media (min-width: 1024px) {
+  /* --- SIDEBAR RESPONSIVE FIXES --- */
   .sidebar {
-    position: static;
-    width: 16rem; /* 256px */
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transform: translateZ(0);
+    flex-shrink: 0;
+    height: 100vh;
+    height: 100dvh;
+    position: relative;
+    z-index: 20;
   }
-  .sidebar.sidebar-folded {
-    width: 3.75rem; /* 60px for a slightly wider folded state to improve icon visibility */
+  
+  /* Desktop sidebar */
+  @media (min-width: 1024px) {
+    .sidebar {
+      position: static;
+      width: 16rem; /* 64 * 4px = 256px */
+    }
+    .sidebar.sidebar-folded {
+      width: 4rem; /* 16 * 4px = 64px */
+    }
   }
-}
-
-/* Mobile sidebar */
+  
+  /* Mobile sidebar */
+/* Mobile Sidebar */
 @media (max-width: 1023px) {
   .sidebar {
     position: fixed;
@@ -255,7 +255,7 @@
     top: 0;
     z-index: 50;
     transform: translateX(-100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
   }
   .sidebar.sidebar-open {
     transform: translateX(0);
@@ -275,39 +275,6 @@
   }
 }
 
-/* Ensure icons are centered in folded state with better spacing */
-.sidebar.sidebar-folded .flex.items-center {
-  justify-content: center;
-}
-
-.sidebar.sidebar-folded button,
-.sidebar.sidebar-folded a {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  padding: 0.75rem; /* Increased padding for better icon spacing */
-}
-
-.sidebar.sidebar-folded .grid.grid-cols-2 {
-  grid-template-columns: 1fr; /* Stack model buttons vertically */
-}
-
-/* Smooth icon transitions and spacing */
-.sidebar button,
-.sidebar a {
-  transition: all 0.2s ease-out;
-}
-
-.sidebar button:hover,
-.sidebar a:hover {
-  transform: scale(1.05);
-}
-
-/* Bottom buttons in folded state */
-.sidebar.sidebar-folded .space-y-1 {
-  gap: 0.5rem; /* Add spacing between vertical buttons */
-}
 
   /* --- MAIN CONTENT AREA FIXES --- */
   .main-content {
