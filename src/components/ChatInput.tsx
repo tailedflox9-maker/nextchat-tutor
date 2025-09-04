@@ -77,76 +77,94 @@ export function ChatInput({
   const canSend = input.trim() && !disabled;
 
   return (
-    <div className="relative">
+    <div className="chat-input">
+      {/* Stop generating button */}
       {isLoading && (
         <div className="flex justify-center mb-2">
           <button
             onClick={onStopGenerating}
-            className="flex items-center gap-2 px-4 py-1.5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-gray-600 transition-all"
+            className="flex items-center gap-2 px-3 sm:px-4 py-1.5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg text-xs sm:text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-gray-600 transition-all touch-target"
           >
-            <Square className="w-3 h-3" /> Stop generating
+            <Square className="w-3 h-3" />
+            <span className="hidden sm:inline">
+              {selectedLanguage === 'en' ? 'Stop generating' : 'निर्माण थांबवा'}
+            </span>
           </button>
         </div>
       )}
-      <form onSubmit={handleSubmit} className="relative">
-        <div className="relative flex items-end w-full p-2 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl">
-          <button 
-            type="button" 
-            onClick={handlePlusClick}
-            className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-            title="Attach file content"
+
+      {/* Input form */}
+      <form onSubmit={handleSubmit} className="chat-input-form">
+        {/* File attach button */}
+        <button 
+          type="button" 
+          onClick={handlePlusClick}
+          className="interactive-button flex-shrink-0 p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors touch-target"
+          title={selectedLanguage === 'en' ? 'Attach file content' : 'फाइल सामग्री जोडा'}
+        >
+          <PlusCircle className="w-5 h-5" />
+        </button>
+        
+        {/* Hidden file input */}
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleFileChange}
+          accept=".txt,.md,.js,.ts,.jsx,.tsx,.py,.html,.css,.json"
+          className="hidden" 
+        />
+        
+        {/* Text area */}
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={
+            disabled
+              ? selectedLanguage === 'en' ? 'Configure API keys first...' : 'प्रथम API की कॉन्फिगर करा...'
+              : selectedLanguage === 'en' ? 'Ask anything...' : 'काहीही विचारा...'
+          }
+          disabled={disabled || isLoading}
+          className="chat-input-textarea"
+          rows={1}
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        />
+        
+        {/* Action buttons */}
+        <div className="chat-input-buttons">
+          {/* Quiz button */}
+          <button
+            type="button"
+            onClick={onGenerateQuiz}
+            disabled={!canGenerateQuiz || isQuizLoading || isLoading}
+            className={`interactive-button w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200 ${
+              !canGenerateQuiz || isQuizLoading || isLoading
+                ? 'bg-transparent text-[var(--color-text-placeholder)] cursor-not-allowed opacity-50'
+                : 'bg-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)]'
+            }`}
+            title={selectedLanguage === 'en' ? 'Generate Quiz' : 'प्रश्नोत्तरी तयार करा'}
           >
-            <PlusCircle className="w-5 h-5" />
+            {isQuizLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <ClipboardCheck className="w-4 h-4" />
+            )}
           </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange}
-            accept=".txt,.md,.js,.ts,.jsx,.tsx,.py,.html,.css,.json"
-            className="hidden" 
-          />
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              disabled
-                ? selectedLanguage === 'en' ? 'Configure API keys first...' : 'प्रथम API की कॉन्फिगर करा...'
-                : selectedLanguage === 'en' ? 'Ask anything...' : 'काहीही विचारा...'
-            }
-            disabled={disabled || isLoading}
-            className="flex-1 min-h-[24px] max-h-[120px] p-2 bg-transparent resize-none focus:outline-none disabled:bg-transparent disabled:text-[var(--color-text-placeholder)] text-[var(--color-text-primary)] placeholder-[var(--color-text-placeholder)] font-semibold"
-            rows={1}
-            style={{ scrollbarWidth: 'none' }}
-          />
-          <div className="self-stretch flex items-end pb-0.5 gap-1">
-            <button
-              type="button"
-              onClick={onGenerateQuiz}
-              disabled={!canGenerateQuiz || isQuizLoading || isLoading}
-              className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200 transform ${
-                !canGenerateQuiz || isQuizLoading || isLoading
-                  ? 'bg-transparent text-[var(--color-text-placeholder)] cursor-not-allowed scale-95'
-                  : 'bg-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] scale-100 hover:scale-105 active:scale-95'
-              }`}
-              title={selectedLanguage === 'en' ? 'Generate Quiz' : 'प्रश्नोत्तरी तयार करा'}
-            >
-              {isQuizLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
-            </button>
-            <button
-              type="submit"
-              disabled={!canSend || isLoading}
-              className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200 transform ${
-                !canSend || isLoading
-                  ? 'bg-transparent text-[var(--color-text-placeholder)] cursor-not-allowed scale-95'
-                  : 'bg-[var(--color-accent-bg)] text-[var(--color-bg)] hover:bg-[var(--color-accent-bg-hover)] scale-100 hover:scale-105 active:scale-95'
-              }`}
-              title={selectedLanguage === 'en' ? 'Send message' : 'संदेश पाठवा'}
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
+
+          {/* Send button */}
+          <button
+            type="submit"
+            disabled={!canSend || isLoading}
+            className={`interactive-button w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200 ${
+              !canSend || isLoading
+                ? 'bg-transparent text-[var(--color-text-placeholder)] cursor-not-allowed opacity-50'
+                : 'bg-[var(--color-accent-bg)] text-[var(--color-bg)] hover:bg-[var(--color-accent-bg-hover)]'
+            }`}
+            title={selectedLanguage === 'en' ? 'Send message' : 'संदेश पाठवा'}
+          >
+            <Send className="w-4 h-4" />
+          </button>
         </div>
       </form>
     </div>
