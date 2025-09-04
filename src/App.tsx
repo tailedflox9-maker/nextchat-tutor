@@ -167,7 +167,6 @@ function App() {
 
     setIsQuizLoading(true);
     try {
-      // Reverted to passing the entire conversation object, as this is what your aiService.ts file expects.
       const session = await aiService.generateQuiz(conversation);
       
       setStudySession(session);
@@ -192,7 +191,6 @@ function App() {
     const existingConversation = conversations.find(c => c.id === currentConversationId);
 
     if (activeView === 'note' || !existingConversation) {
-      // Create a new conversation object with the first message
       conversationToUpdate = {
         id: generateId(),
         title: generateConversationTitle(content),
@@ -203,7 +201,6 @@ function App() {
       setConversations(prev => [conversationToUpdate, ...prev]);
       handleSelectConversation(conversationToUpdate.id);
     } else {
-      // Create an updated version of the existing conversation
       conversationToUpdate = {
         ...existingConversation,
         title: existingConversation.messages.length === 0 && !existingConversation.isPersona 
@@ -361,31 +358,34 @@ function App() {
         />
       )}
 
-      {/* Sidebar Container with THE FIX */}
-      <div className={`sidebar z-50 ${sidebarFolded ? 'sidebar-folded' : ''} ${sidebarOpen ? 'sidebar-open' : ''}`}>
-        <Sidebar
-          conversations={sortedConversations}
-          notes={sortedNotes}
-          activeView={activeView}
-          currentConversationId={currentConversationId}
-          currentNoteId={currentNoteId}
-          onNewConversation={handleNewConversation}
-          onNewPersonaConversation={handleNewPersonaConversation}
-          onSelectConversation={handleSelectConversation}
-          onSelectNote={handleSelectNote}
-          onDeleteConversation={handleDeleteConversation}
-          onRenameConversation={handleRenameConversation}
-          onTogglePinConversation={handleTogglePinConversation}
-          onDeleteNote={handleDeleteNote}
-          onOpenSettings={() => setSettingsOpen(true)}
-          settings={settings}
-          onModelChange={handleModelChange}
-          onCloseSidebar={() => setSidebarOpen(false)}
-          isFolded={sidebarFolded}
-          onToggleFold={() => setSidebarFolded(!sidebarFolded)}
-          isSidebarOpen={sidebarOpen}
-        />
-      </div>
+      {/* 
+        =====================================================================
+        THE FIX: The Sidebar component is now a direct child. The problematic
+        wrapper div has been removed. The Sidebar now controls its own layout.
+        =====================================================================
+      */}
+      <Sidebar
+        conversations={sortedConversations}
+        notes={sortedNotes}
+        activeView={activeView}
+        currentConversationId={currentConversationId}
+        currentNoteId={currentNoteId}
+        onNewConversation={handleNewConversation}
+        onNewPersonaConversation={handleNewPersonaConversation}
+        onSelectConversation={handleSelectConversation}
+        onSelectNote={handleSelectNote}
+        onDeleteConversation={handleDeleteConversation}
+        onRenameConversation={handleRenameConversation}
+        onTogglePinConversation={handleTogglePinConversation}
+        onDeleteNote={handleDeleteNote}
+        onOpenSettings={() => setSettingsOpen(true)}
+        settings={settings}
+        onModelChange={handleModelChange}
+        onCloseSidebar={() => setSidebarOpen(false)}
+        isFolded={sidebarFolded}
+        onToggleFold={() => setSidebarFolded(!sidebarFolded)}
+        isSidebarOpen={sidebarOpen}
+      />
 
       {/* Main Content Area */}
       <div className="main-content">
