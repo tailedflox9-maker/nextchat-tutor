@@ -21,11 +21,12 @@ export interface Conversation {
 }
 
 export interface Note {
-  id:string;
+  id: string;
   title: string;
   content: string;
   createdAt: Date;
   updatedAt: Date;
+  sourceConversationId: string; // To link back to the original chat
 }
 
 export interface APISettings {
@@ -38,7 +39,7 @@ export interface APISettings {
 export interface StudySession {
   id: string;
   conversationId: string;
-  type: 'quiz' | 'flashcards' | 'practice';
+  type: 'quiz' | 'flashcards';
   questions: StudyQuestion[];
   createdAt: Date;
   completedAt?: Date;
