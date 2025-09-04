@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useContext, useCallback, useMemo } from 'react';
-import { Sparkles, Info, ArrowDown } from 'lucide-react';
+import { Sparkles, Info, ArrowDown, BookOpen } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { Conversation, Message } from '../types';
@@ -15,6 +15,8 @@ interface ChatAreaProps {
   onEditMessage?: (messageId: string, newContent: string) => void;
   onRegenerateResponse?: (messageId: string) => void;
   onStopGenerating: () => void;
+  onSaveAsNote: (content: string) => void;
+  onGenerateStudySession: (type: 'quiz' | 'flashcards') => void;
 }
 
 const SkeletonMessageBubble = React.memo(() => (
@@ -80,12 +82,15 @@ export function ChatArea({
   onEditMessage,
   onRegenerateResponse,
   onStopGenerating,
+  onSaveAsNote,
+  onGenerateStudySession,
 }: ChatAreaProps) {
   const { selectedLanguage } = useContext(LanguageContext);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [userScrolled, setUserScrolled] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [showStudyOptions, setShowStudyOptions] = useState(false);
   const lastScrollTop = useRef(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout>();
   const isScrollingRef = useRef(false);
@@ -183,6 +188,7 @@ export function ChatArea({
   }, [scrollToBottom]);
 
   const showSkeleton = isLoading && allMessages.length > 0 && !streamingMessage;
+  const canGenerateStudyMaterials = conversation && conversation.messages.length > 2;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[var(--color-bg)] relative will-change-transform">
@@ -217,7 +223,26 @@ export function ChatArea({
             WebkitOverflowScrolling: 'touch' // Better iOS scrolling
           }}
         >
-          <div className="max-w-3xl mx-auto px-4 py-6 pt-8">
+          <div className="max-w-3xl mx-auto px-4 py-6 pt-8 relative">
+            {canGenerateStudyMaterials && (
+                <div className="absolute top-0 right-4">
+                  <div className="relative">
+                    <button 
+                      onClick={() => setShowStudyOptions(!showStudyOptions)}
+                      onBlur={() => setTimeout(() => setShowStudyOptions(false), 200)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-gray-600 transition-all"
+                    >
+                      <BookOpen className="w-4 h-4" /> {selectedLanguage === 'en' ? 'Study' : 'अभ्यास'}
+                    </button>
+                    {showStudyOptions && (
+                      <div className="absolute right-0 mt-2 w-40 bg-[var(--color-sidebar)] border border-[var(--color-border)] rounded-lg shadow-xl z-10 animate-fade-in-up">
+                        <button onClick={() => onGenerateStudySession('quiz')} className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--color-card)] rounded-t-lg">{selectedLanguage === 'en' ? 'Generate Quiz' : 'प्रश्नोत्तरी तयार करा'}</button>
+                        <button onClick={() => onGenerateStudySession('flashcards')} className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--color-card)] rounded-b-lg">{selectedLanguage === 'en' ? 'Make Flashcards' : 'फ्लॅशकार्ड बनवा'}</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+            )}
             {conversation?.isPersona && conversation.systemPrompt && (
               <PersonaInfo 
                 conversation={conversation} 
@@ -226,7 +251,7 @@ export function ChatArea({
             )}
             
             {/* Messages container with stable layout */}
-            <div className="space-y-6">
+            <div className="space-y-6 pt-12">
               {allMessages.map((message) => (
                 <div key={message.id} className="message-wrapper">
                   <MessageBubble
@@ -235,6 +260,7 @@ export function ChatArea({
                     model={model}
                     onEditMessage={onEditMessage}
                     onRegenerateResponse={onRegenerateResponse}
+                    onSaveAsNote={onSaveAsNote}
                   />
                 </div>
               ))}
