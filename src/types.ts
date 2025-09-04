@@ -16,8 +16,8 @@ export interface Conversation {
   updatedAt: Date;
   summary?: string;
   isPinned?: boolean;
-  isPersona?: boolean; // New: Flag for custom system prompt chats
-  systemPrompt?: string; // New: Stores the custom system prompt
+  isPersona?: boolean;
+  systemPrompt?: string;
 }
 
 export interface Note {
@@ -26,7 +26,7 @@ export interface Note {
   content: string;
   createdAt: Date;
   updatedAt: Date;
-  sourceConversationId: string; // To link back to the original chat
+  sourceConversationId: string;
 }
 
 export interface APISettings {
