@@ -23,7 +23,7 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
         </div>
         
         {/* Text content */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-[var(--color-text-primary)] text-base">
             {selectedLanguage === 'en' ? 'Install AI Tutor App' : 'AI ट्यूटर ॲप इंस्टॉल करा'}
           </h3>
@@ -39,13 +39,13 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
       <div className="flex justify-end gap-3 mt-4">
         <button
           onClick={onDismiss}
-          className="px-4 py-2 text-sm font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)] rounded-lg transition-colors touch-target"
+          className="interactive-button px-4 py-2 text-sm font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)] rounded-lg transition-colors touch-target"
         >
           {selectedLanguage === 'en' ? 'Later' : 'नंतर'}
         </button>
         <button
           onClick={onInstall}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] text-[var(--color-accent-text)] rounded-lg transition-colors touch-target"
+          className="interactive-button flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] text-[var(--color-accent-text)] rounded-lg transition-colors touch-target"
         >
           <Download className="w-4 h-4" />
           {selectedLanguage === 'en' ? 'Install' : 'इंस्टॉल करा'}
