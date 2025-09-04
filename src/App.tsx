@@ -401,7 +401,7 @@ function App() {
   }, [conversations]);
 
   return (
-    <div className="h-screen flex bg-[var(--color-bg)] text-[var(--color-text-primary)] relative">
+    <div className="h-[100dvh] flex bg-[var(--color-bg)] text-[var(--color-text-primary)] relative">
       {sidebarOpen && (
         <Sidebar
           conversations={sortedConversations}
