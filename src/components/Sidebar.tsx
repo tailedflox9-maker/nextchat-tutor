@@ -1,13 +1,12 @@
 import React, { useContext, useState, useMemo } from 'react';
 import {
-  Plus, MessageSquare, Settings, Trash2, X, ChevronLeft, ChevronRight, 
+  Plus, MessageSquare, Settings, Trash2, X, ChevronLeft, ChevronRight,
   Sparkles, Brain, Cloud, Terminal, Search, Pin, Edit, Users, Wand2, Book
 } from 'lucide-react';
 import { Conversation, Note } from '../types';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { aiService } from '../services/aiService';
 
-// (Interface remains the same)
 interface SidebarProps {
   conversations: Conversation[];
   notes: Note[];
@@ -31,27 +30,26 @@ interface SidebarProps {
   onToggleFold?: () => void;
 }
 
-
 export function Sidebar({
-  conversations, 
-  notes, 
-  activeView, 
-  currentConversationId, 
-  currentNoteId, 
-  onNewConversation, 
-  onNewPersonaConversation, 
-  onSelectConversation, 
-  onSelectNote, 
-  onDeleteConversation, 
-  onRenameConversation, 
-  onTogglePinConversation, 
-  onDeleteNote, 
-  onOpenSettings, 
-  settings, 
-  onModelChange, 
-  onCloseSidebar, 
-  isFolded = false, 
-  onToggleFold, 
+  conversations,
+  notes,
+  activeView,
+  currentConversationId,
+  currentNoteId,
+  onNewConversation,
+  onNewPersonaConversation,
+  onSelectConversation,
+  onSelectNote,
+  onDeleteConversation,
+  onRenameConversation,
+  onTogglePinConversation,
+  onDeleteNote,
+  onOpenSettings,
+  settings,
+  onModelChange,
+  onCloseSidebar,
+  isFolded = false,
+  onToggleFold,
   isSidebarOpen
 }: SidebarProps) {
   const { selectedLanguage } = useContext(LanguageContext);
@@ -61,14 +59,13 @@ export function Sidebar({
   const [view, setView] = useState<'chats' | 'personas' | 'notes'>('chats');
   const [personaPrompt, setPersonaPrompt] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
-
   const models = [
     { id: 'google', icon: Sparkles, name: 'Gemma' },
     { id: 'zhipu', icon: Brain, name: 'ZhipuAI' },
     { id: 'mistral-small', icon: Cloud, name: 'Mistral' },
     { id: 'mistral-codestral', icon: Terminal, name: 'Codestral' },
   ];
-  
+
   const filteredConversations = useMemo(() => {
     return conversations
       .filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -129,11 +126,10 @@ export function Sidebar({
     }
   };
 
-  const sidebarClasses = `${isFolded ? 'w-16' : 'w-64'} bg-[var(--color-sidebar)] flex flex-col h-full border-r border-[var(--color-border)] sidebar transition-all duration-300 ease-in-out fixed lg:static z-50 ${isSidebarOpen ? '' : 'hidden lg:flex'}`;
+  const sidebarClasses = `${isFolded ? 'w-16' : 'w-64'} bg-[var(--color-sidebar)] flex flex-col h-full border-r border-[var(--color-border)] sidebar transition-all duration-300 ease-in-out fixed lg:static z-50 ${isSidebarOpen ? 'sidebar-open' : 'hidden lg:flex'}`;
 
   return (
     <aside className={sidebarClasses}>
-      {/* Header */}
       <div className="p-2 border-b border-[var(--color-border)] flex flex-col gap-2">
         <div className={`flex items-center ${isFolded ? 'justify-center' : 'justify-between'}`}>
           {!isFolded && (
@@ -167,8 +163,6 @@ export function Sidebar({
           )}
         </button>
       </div>
-
-      {/* Model Selection */}
       <div className="p-2">
         {isFolded ? (
           <div className="space-y-2">
@@ -192,8 +186,6 @@ export function Sidebar({
           </div>
         )}
       </div>
-
-      {/* This central area will now correctly scroll, pushing the footer down */}
       <div className="flex-1 overflow-y-auto p-2 border-t border-[var(--color-border)] mt-2 flex flex-col">
         {(view === 'chats' || view === 'notes') && !isFolded && (
           <div className="relative mb-2">
@@ -201,7 +193,6 @@ export function Sidebar({
             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={selectedLanguage === 'en' ? `Search ${view}...` : `${view === 'chats' ? 'चॅट' : 'नोट्स'} शोधा...`} className="w-full bg-[var(--color-card)] border border-transparent focus:border-[var(--color-border)] rounded-lg pl-9 pr-3 py-1.5 text-sm placeholder:text-[var(--color-text-placeholder)] focus:outline-none transition-colors" />
           </div>
         )}
-
         {view === 'chats' && (
           <div className="space-y-1">
             {filteredConversations.length > 0 ? filteredConversations.map((conversation) => (
@@ -227,7 +218,7 @@ export function Sidebar({
               <div className="text-center py-8 px-4">
                   <MessageSquare className="w-12 h-12 mx-auto text-[var(--color-text-secondary)] opacity-50 mb-3" />
                   <p className="text-sm text-[var(--color-text-secondary)]">
-                    {searchQuery ? 
+                    {searchQuery ?
                       (selectedLanguage === 'en' ? 'No chats found' : 'कोणतीही चॅट आढळली नाही') :
                       (selectedLanguage === 'en' ? 'No chats yet' : 'अद्याप कोणतीही चॅट नाही')
                     }
@@ -236,7 +227,6 @@ export function Sidebar({
             )}
           </div>
         )}
-
         {view === 'notes' && !isFolded && (
           <div className="space-y-1">
             {filteredNotes.length > 0 ? filteredNotes.map((note) => (
@@ -251,7 +241,7 @@ export function Sidebar({
               <div className="text-center py-8 px-4">
                   <Book className="w-12 h-12 mx-auto text-[var(--color-text-secondary)] opacity-50 mb-3" />
                   <p className="text-sm text-[var(--color-text-secondary)]">
-                    {searchQuery ? 
+                    {searchQuery ?
                       (selectedLanguage === 'en' ? 'No notes found' : 'कोणत्याही नोट्स आढळल्या नाहीत') :
                       (selectedLanguage === 'en' ? 'No notes yet' : 'अद्याप कोणत्याही नोट्स नाहीत')
                     }
@@ -260,7 +250,6 @@ export function Sidebar({
             )}
           </div>
         )}
-
         {view === 'personas' && !isFolded && (
            <div className="p-2 flex flex-col h-full">
             <h3 className="text-base font-semibold mb-2">{selectedLanguage === 'en' ? 'Create a Persona' : 'एक Persona तयार करा'}</h3>
@@ -273,21 +262,18 @@ export function Sidebar({
           </div>
         )}
       </div>
-
-      {/* This footer will now be correctly anchored to the bottom */}
       <div className="p-2 border-t border-[var(--color-border)]">
         <div className="grid grid-cols-3 gap-1">
            <button onClick={() => setView('chats')} className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${view === 'chats' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}><MessageSquare className="w-5 h-5" />{!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Chats' : 'चॅट्स'}</span>}</button>
            <button onClick={() => setView('personas')} className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${view === 'personas' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}><Users className="w-5 h-5" />{!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Personas' : 'Personas'}</span>}</button>
            <button onClick={() => setView('notes')} className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${view === 'notes' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}><Book className="w-5 h-5" />{!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Notes' : 'नोट्स'}</span>}</button>
         </div>
-        
         {!isFolded && (
           <div className="mt-2 text-center">
-            <a 
-              href="https://tanmay-kalbande.github.io/" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a
+              href="https://tanmay-kalbande.github.io/"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               Developed by Tanmay Kalbande
