@@ -30,26 +30,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({
-  conversations, 
-  notes, 
-  activeView, 
-  currentConversationId, 
-  currentNoteId, 
-  onNewConversation, 
-  onNewPersonaConversation, 
-  onSelectConversation, 
-  onSelectNote, 
-  onDeleteConversation, 
-  onRenameConversation, 
-  onTogglePinConversation, 
-  onDeleteNote, 
-  onOpenSettings, 
-  settings, 
-  onModelChange, 
-  onCloseSidebar, 
-  isFolded = false, 
-  onToggleFold, 
-  isSidebarOpen
+  conversations, notes, activeView, currentConversationId, currentNoteId, onNewConversation, onNewPersonaConversation, onSelectConversation, onSelectNote, onDeleteConversation, onRenameConversation, onTogglePinConversation, onDeleteNote, onOpenSettings, settings, onModelChange, onCloseSidebar, isFolded = false, onToggleFold, isSidebarOpen
 }: SidebarProps) {
   const { selectedLanguage } = useContext(LanguageContext);
   const [searchQuery, setSearchQuery] = useState('');
@@ -112,7 +93,6 @@ export function Sidebar({
 
   return (
     <div className={`${isFolded ? 'w-16' : 'w-64'} bg-[var(--color-sidebar)] flex flex-col h-full border-r border-[var(--color-border)] sidebar transition-all duration-300 ease-in-out fixed lg:static z-20 ${isSidebarOpen ? '' : 'hidden lg:flex'}`}>
-      {/* Header section */}
       <div className="p-2 border-b border-[var(--color-border)] flex flex-col gap-2">
         <div className={`flex items-center ${isFolded ? 'justify-center' : 'justify-between'}`}>
           {!isFolded && (
@@ -147,7 +127,6 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Model selection section */}
       <div className="p-2">
         {isFolded ? (
           <div className="space-y-2">
@@ -172,7 +151,6 @@ export function Sidebar({
         )}
       </div>
 
-      {/* Main content section (chats, notes, personas) */}
       <div className="flex-1 overflow-y-auto p-2 border-t border-[var(--color-border)] mt-2 flex flex-col">
         {(view === 'chats' || view === 'notes') && !isFolded && (
           <div className="relative mb-2">
@@ -233,7 +211,6 @@ export function Sidebar({
         )}
       </div>
 
-      {/* Footer navigation */}
       <div className="p-2 border-t border-[var(--color-border)]">
         <div className="grid grid-cols-3 gap-1">
            <button onClick={() => setView('chats')} className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${view === 'chats' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}><MessageSquare className="w-5 h-5" />{!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Chats' : 'चॅट्स'}</span>}</button>
