@@ -353,30 +353,43 @@ function App() {
 
   return (
     <div className="app-container">
-      <Sidebar
-        conversations={sortedConversations}
-        notes={sortedNotes}
-        activeView={activeView}
-        currentConversationId={currentConversationId}
-        currentNoteId={currentNoteId}
-        onNewConversation={handleNewConversation}
-        onNewPersonaConversation={handleNewPersonaConversation}
-        onSelectConversation={handleSelectConversation}
-        onSelectNote={handleSelectNote}
-        onDeleteConversation={handleDeleteConversation}
-        onRenameConversation={handleRenameConversation}
-        onTogglePinConversation={handleTogglePinConversation}
-        onDeleteNote={handleDeleteNote}
-        onOpenSettings={() => setSettingsOpen(true)}
-        settings={settings}
-        onModelChange={handleModelChange}
-        onCloseSidebar={() => setSidebarOpen(false)}
-        isFolded={sidebarFolded}
-        onToggleFold={() => setSidebarFolded(!sidebarFolded)}
-        isSidebarOpen={sidebarOpen}
-      />
+      {/* Mobile backdrop for sidebar */}
+      {sidebarOpen && window.innerWidth < 1024 && (
+        <div 
+          className="sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
+      {/* Sidebar Container with THE FIX */}
+      <div className={`sidebar z-50 ${sidebarFolded ? 'sidebar-folded' : ''} ${sidebarOpen ? 'sidebar-open' : ''}`}>
+        <Sidebar
+          conversations={sortedConversations}
+          notes={sortedNotes}
+          activeView={activeView}
+          currentConversationId={currentConversationId}
+          currentNoteId={currentNoteId}
+          onNewConversation={handleNewConversation}
+          onNewPersonaConversation={handleNewPersonaConversation}
+          onSelectConversation={handleSelectConversation}
+          onSelectNote={handleSelectNote}
+          onDeleteConversation={handleDeleteConversation}
+          onRenameConversation={handleRenameConversation}
+          onTogglePinConversation={handleTogglePinConversation}
+          onDeleteNote={handleDeleteNote}
+          onOpenSettings={() => setSettingsOpen(true)}
+          settings={settings}
+          onModelChange={handleModelChange}
+          onCloseSidebar={() => setSidebarOpen(false)}
+          isFolded={sidebarFolded}
+          onToggleFold={() => setSidebarFolded(!sidebarFolded)}
+          isSidebarOpen={sidebarOpen}
+        />
+      </div>
+
+      {/* Main Content Area */}
       <div className="main-content">
+        {/* Mobile menu button */}
         {!sidebarOpen && (
           <button 
             onClick={() => setSidebarOpen(true)} 
@@ -407,6 +420,7 @@ function App() {
         )}
       </div>
 
+      {/* Modals */}
       <SettingsModal 
         isOpen={settingsOpen} 
         onClose={() => setSettingsOpen(false)} 
