@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useContext, useCallback, useMemo } from 'react';
-import { Sparkles, Info, ArrowDown, BookOpen } from 'lucide-react';
+import { Sparkles, ArrowDown, ClipboardCheck, Loader2 } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { Conversation, Message } from '../types';
@@ -9,281 +9,95 @@ interface ChatAreaProps {
   conversation: Conversation | undefined;
   onSendMessage: (message: string) => void;
   isLoading: boolean;
+  isQuizLoading: boolean;
   streamingMessage?: Message | null;
   hasApiKey: boolean;
-  model?: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral';
-  onEditMessage?: (messageId: string, newContent: string) => void;
-  onRegenerateResponse?: (messageId: string) => void;
   onStopGenerating: () => void;
   onSaveAsNote: (content: string) => void;
-  onGenerateStudySession: (type: 'quiz' | 'flashcards') => void;
+  onGenerateQuiz: () => void;
+  onEditMessage?: (messageId: string, newContent: string) => void;
+  onRegenerateResponse?: (messageId: string) => void;
 }
-
-const SkeletonMessageBubble = React.memo(() => (
-  <div className="flex gap-4 mb-6 justify-start animate-pulse">
-    <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-card)]">
-      <Sparkles className="w-4 h-4 text-[var(--color-text-secondary)]" />
-    </div>
-    <div className="relative max-w-[85%] bg-[var(--color-card)] p-4 rounded-xl w-full">
-      <div className="space-y-2">
-        <div className="h-4 bg-[var(--color-border)] rounded w-3/4 animate-shimmer"></div>
-        <div className="h-4 bg-[var(--color-border)] rounded w-1/2 animate-shimmer"></div>
-      </div>
-    </div>
-  </div>
-));
-
-const PersonaInfo = React.memo(({ conversation, selectedLanguage }: { 
-  conversation: Conversation; 
-  selectedLanguage: 'en' | 'mr'; 
-}) => (
-  <div className="p-4 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl mb-6 animate-fade-in-up will-change-transform">
-    <div className="flex items-center gap-2 mb-2">
-      <Info className="w-4 h-4 text-blue-400 flex-shrink-0" />
-      <h4 className="font-semibold text-sm text-[var(--color-text-primary)]">
-        {selectedLanguage === 'en' ? 'Active Persona' : 'सक्रिय Persona'}
-      </h4>
-    </div>
-    <p className="text-sm text-[var(--color-text-secondary)] italic leading-relaxed max-h-20 overflow-y-auto">
-      "{conversation.systemPrompt}"
-    </p>
-  </div>
-));
-
-const ScrollToBottomButton = React.memo(({ 
-  show, 
-  onClick, 
-  selectedLanguage 
-}: { 
-  show: boolean; 
-  onClick: () => void; 
-  selectedLanguage: 'en' | 'mr'; 
-}) => (
-  <button
-    onClick={onClick}
-    className={`fixed bottom-24 right-6 bg-[var(--color-card)] border border-[var(--color-border)] rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300 z-10 hover:scale-105 will-change-transform ${
-      show
-        ? 'opacity-100 translate-y-0 pointer-events-auto'
-        : 'opacity-0 translate-y-4 pointer-events-none'
-    }`}
-    aria-label={selectedLanguage === 'en' ? 'Scroll to bottom' : 'खाली स्क्रोल करा'}
-  >
-    <ArrowDown className="w-5 h-5 text-[var(--color-text-secondary)]" />
-  </button>
-));
 
 export function ChatArea({
   conversation,
   onSendMessage,
   isLoading,
+  isQuizLoading,
   streamingMessage,
   hasApiKey,
-  model,
-  onEditMessage,
-  onRegenerateResponse,
   onStopGenerating,
   onSaveAsNote,
-  onGenerateStudySession,
+  onGenerateQuiz,
+  onEditMessage,
+  onRegenerateResponse,
 }: ChatAreaProps) {
   const { selectedLanguage } = useContext(LanguageContext);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const [userScrolled, setUserScrolled] = useState(false);
-  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
-  const [showStudyOptions, setShowStudyOptions] = useState(false);
-  const lastScrollTop = useRef(0);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout>();
-  const isScrollingRef = useRef(false);
-
-  // Memoize messages to prevent unnecessary re-renders
-  const messages = useMemo(() => conversation?.messages || [], [conversation?.messages]);
   
-  // Memoize all messages including streaming
   const allMessages = useMemo(() => 
-    streamingMessage ? [...messages, streamingMessage] : messages, 
-    [messages, streamingMessage]
+    streamingMessage ? [...(conversation?.messages || []), streamingMessage] : conversation?.messages || [], 
+    [conversation?.messages, streamingMessage]
   );
-
-  // Optimized scroll to bottom with requestAnimationFrame
-  const scrollToBottom = useCallback((smooth = true) => {
-    if (isScrollingRef.current) return;
-    
-    isScrollingRef.current = true;
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({
-        behavior: smooth ? 'smooth' : 'auto',
-        block: 'end',
-      });
-      
-      setTimeout(() => {
-        isScrollingRef.current = false;
-      }, 100);
-    });
+  
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  // Throttled scroll handler
-  const handleScroll = useCallback(() => {
-    if (!messagesContainerRef.current || isScrollingRef.current) return;
-
-    // Clear existing timeout
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-
-    // Throttle scroll handling
-    scrollTimeoutRef.current = setTimeout(() => {
-      if (!messagesContainerRef.current) return;
-      
-      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100; // Increased threshold
-      const scrollingUp = scrollTop < lastScrollTop.current && scrollTop > 0;
-
-      if (scrollingUp && !isAtBottom) {
-        setUserScrolled(true);
-        setShowScrollToBottom(true);
-      }
-
-      if (isAtBottom) {
-        setUserScrolled(false);
-        setShowScrollToBottom(false);
-      }
-
-      lastScrollTop.current = scrollTop;
-    }, 50); // Throttle to 50ms
-  }, []);
-
-  // Auto-scroll when new messages arrive or content changes
   useEffect(() => {
-    if (!userScrolled && !isScrollingRef.current) {
-      // Use requestAnimationFrame for smoother scrolling
-      const scrollTimeout = setTimeout(() => {
-        scrollToBottom(false); // Don't animate for streaming content
-      }, 50);
-      
-      return () => clearTimeout(scrollTimeout);
-    }
-  }, [allMessages.length, streamingMessage?.content, userScrolled, scrollToBottom]);
+    scrollToBottom();
+  }, [allMessages.length, streamingMessage?.content, scrollToBottom]);
 
-  // Reset scroll state when conversation changes
-  useEffect(() => {
-    if (messages.length === 0) {
-      setUserScrolled(false);
-      setShowScrollToBottom(false);
-    }
-  }, [messages.length]);
-
-  // Cleanup timeouts
-  useEffect(() => {
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Handle scroll to bottom button click
-  const handleScrollToBottomClick = useCallback(() => {
-    setUserScrolled(false);
-    scrollToBottom(true);
-  }, [scrollToBottom]);
-
-  const showSkeleton = isLoading && allMessages.length > 0 && !streamingMessage;
-  const canGenerateStudyMaterials = conversation && conversation.messages.length > 2;
+  const canGenerateQuiz = conversation && conversation.messages.length > 2;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[var(--color-bg)] relative will-change-transform">
+    <div className="flex-1 flex flex-col h-full bg-[var(--color-bg)] relative">
       {allMessages.length === 0 && !isLoading && !conversation ? (
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center max-w-md w-full">
-            <div className="w-24 h-24 bg-[var(--color-card)] rounded-full flex items-center justify-center mx-auto mb-6 p-4">
-              <img src="/white-logo.png" alt="AI Tutor Logo" className="w-full h-full object-contain" />
-            </div>
+            <img src="/white-logo.png" alt="AI Tutor Logo" className="w-24 h-24 mx-auto mb-6" />
             <h2 className="text-5xl font-bold text-[var(--color-text-primary)] mb-4">
               {selectedLanguage === 'en' ? 'AI Tutor' : 'एआय शिक्षक'}
             </h2>
-            {!hasApiKey && (
-              <div className="bg-yellow-900/50 border border-yellow-700/50 rounded-lg p-4 text-left mt-6">
-                <p className="text-sm text-yellow-300">
-                  <strong>{selectedLanguage === 'en' ? 'Setup Required:' : 'सेटअप आवश्यक:'}</strong>{' '}
-                  {selectedLanguage === 'en'
-                    ? 'Please configure your API keys in Settings to start chatting.'
-                    : 'कृपया चॅटिंग सुरू करण्यासाठी सेटिंग्जमध्ये आपली API की कॉन्फिगर करा.'}
-                </p>
-              </div>
-            )}
           </div>
         </div>
       ) : (
-        <div 
-          ref={messagesContainerRef} 
-          className="flex-1 overflow-y-auto scroll-smooth" 
-          onScroll={handleScroll}
-          style={{ 
-            scrollbarWidth: 'thin',
-            WebkitOverflowScrolling: 'touch' // Better iOS scrolling
-          }}
-        >
+        <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-4 py-6 pt-8 relative">
-            {canGenerateStudyMaterials && (
-                <div className="absolute top-0 right-4">
-                  <div className="relative">
-                    <button 
-                      onClick={() => setShowStudyOptions(!showStudyOptions)}
-                      onBlur={() => setTimeout(() => setShowStudyOptions(false), 200)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-gray-600 transition-all"
-                    >
-                      <BookOpen className="w-4 h-4" /> {selectedLanguage === 'en' ? 'Study' : 'अभ्यास'}
-                    </button>
-                    {showStudyOptions && (
-                      <div className="absolute right-0 mt-2 w-40 bg-[var(--color-sidebar)] border border-[var(--color-border)] rounded-lg shadow-xl z-10 animate-fade-in-up">
-                        <button onClick={() => onGenerateStudySession('quiz')} className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--color-card)] rounded-t-lg">{selectedLanguage === 'en' ? 'Generate Quiz' : 'प्रश्नोत्तरी तयार करा'}</button>
-                        <button onClick={() => onGenerateStudySession('flashcards')} className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--color-card)] rounded-b-lg">{selectedLanguage === 'en' ? 'Make Flashcards' : 'फ्लॅशकार्ड बनवा'}</button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-            )}
-            {conversation?.isPersona && conversation.systemPrompt && (
-              <PersonaInfo 
-                conversation={conversation} 
-                selectedLanguage={selectedLanguage} 
-              />
+            {canGenerateQuiz && (
+              <div className="absolute top-2 right-4 z-10">
+                <button 
+                  onClick={onGenerateQuiz}
+                  disabled={isQuizLoading || isLoading}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={selectedLanguage === 'en' ? 'Generate Quiz' : 'प्रश्नोत्तरी तयार करा'}
+                >
+                  {isQuizLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ClipboardCheck className="w-4 h-4" />
+                  )}
+                  {selectedLanguage === 'en' ? 'Generate Quiz' : 'प्रश्नोत्तरी'}
+                </button>
+              </div>
             )}
             
-            {/* Messages container with stable layout */}
             <div className="space-y-6 pt-12">
               {allMessages.map((message) => (
-                <div key={message.id} className="message-wrapper">
-                  <MessageBubble
-                    message={message}
-                    isStreaming={streamingMessage?.id === message.id}
-                    model={model}
-                    onEditMessage={onEditMessage}
-                    onRegenerateResponse={onRegenerateResponse}
-                    onSaveAsNote={onSaveAsNote}
-                  />
-                </div>
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  isStreaming={streamingMessage?.id === message.id}
+                  onSaveAsNote={onSaveAsNote}
+                  onEditMessage={onEditMessage}
+                  onRegenerateResponse={onRegenerateResponse}
+                />
               ))}
-              
-              {showSkeleton && (
-                <div className="will-change-transform">
-                  <SkeletonMessageBubble />
-                </div>
-              )}
             </div>
           </div>
-          
-          {/* Stable scroll anchor */}
           <div ref={messagesEndRef} className="h-1" />
         </div>
       )}
-
-      <ScrollToBottomButton
-        show={showScrollToBottom}
-        onClick={handleScrollToBottomClick}
-        selectedLanguage={selectedLanguage}
-      />
-
       <div className="p-4 bg-[var(--color-bg)]">
         <div className="max-w-3xl mx-auto">
           <ChatInput
