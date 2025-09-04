@@ -89,5 +89,6 @@ export const storageUtils = {
     localStorage.removeItem(CONVERSATIONS_KEY);
     localStorage.removeItem(SETTINGS_KEY);
     localStorage.removeItem(NOTES_KEY);
+    // Add any other keys you might use
   }
 };
