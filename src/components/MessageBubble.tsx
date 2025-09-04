@@ -50,7 +50,7 @@ const CodeBlock = React.memo(({
         </span>
         <button
           onClick={handleCopy}
-          className="p-1.5 bg-gray-800 rounded hover:bg-gray-700 text-gray-300 transition-colors"
+          className="interactive-button p-1.5 bg-gray-800 rounded hover:bg-gray-700 text-gray-300 transition-colors touch-target"
           title={selectedLanguage === 'en' ? 'Copy code' : 'कोड कॉपी करा'}
         >
           {copied ? (
@@ -106,16 +106,16 @@ const ActionButtons = React.memo(({
       {!isUser && onRegenerate && (
         <button
           onClick={onRegenerate}
-          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)]"
+          className="interactive-button text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)] touch-target"
           title={selectedLanguage === 'en' ? 'Regenerate response' : 'प्रतिसाद पुन्हा तयार करा'}
         >
           <RefreshCcw className="w-4 h-4" />
         </button>
       )}
       {!isUser && (
-         <button
+        <button
           onClick={onSaveNote}
-          className={`transition-colors p-1 rounded hover:bg-[var(--color-border)] ${noteSaved ? 'text-blue-400' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+          className={`interactive-button transition-colors p-1 rounded hover:bg-[var(--color-border)] touch-target ${noteSaved ? 'text-blue-400' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
           title={selectedLanguage === 'en' ? 'Save as Note' : 'टीप म्हणून जतन करा'}
         >
           <Bookmark className="w-4 h-4" />
@@ -123,22 +123,22 @@ const ActionButtons = React.memo(({
       )}
       <button
         onClick={onEdit}
-        className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)]"
+        className="interactive-button text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)] touch-target"
         title={selectedLanguage === 'en' ? 'Edit message' : 'संदेश संपादित करा'}
       >
         <Edit2 className="w-4 h-4" />
       </button>
       <button
         onClick={onCopy}
-        className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)]"
+        className="interactive-button text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)] touch-target"
         title={selectedLanguage === 'en' ? 'Copy message' : 'संदेश कॉपी करा'}
       >
         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
       </button>
-       {!isUser && (
+      {!isUser && (
         <button
           onClick={onExport}
-          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)]"
+          className="interactive-button text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)] touch-target"
           title={selectedLanguage === 'en' ? 'Export as Markdown' : 'मार्कडाउन म्हणून निर्यात करा'}
         >
           <Download className="w-4 h-4" />
@@ -296,7 +296,7 @@ export function MessageBubble({
 
   return (
     <div
-      className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'} group transition-all duration-200 ease-out will-change-transform`}
+      className={`message-wrapper flex gap-3 sm:gap-4 ${isUser ? 'justify-end' : 'justify-start'} group transition-all duration-200 ease-out will-change-transform`}
     >
       {!isUser && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-card)]">
@@ -304,7 +304,7 @@ export function MessageBubble({
         </div>
       )}
       
-      <div className="relative max-w-[85%] bg-[var(--color-card)] p-4 rounded-xl min-h-[3rem] flex flex-col">
+      <div className="message-bubble relative bg-[var(--color-card)] p-3 sm:p-4 rounded-xl min-h-[3rem] flex flex-col">
         {!isUser && displayModel && (
           <div className="text-xs text-[var(--color-text-secondary)] mb-2 font-medium tracking-wide">
             {displayModel}
@@ -324,14 +324,14 @@ export function MessageBubble({
             <div className="flex gap-2 justify-end">
               <button
                 onClick={handleCancelEdit}
-                className="flex items-center gap-1 px-3 py-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors text-sm"
+                className="interactive-button flex items-center gap-1 px-3 py-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors text-sm touch-target"
               >
                 <X className="w-3 h-3" />
                 {selectedLanguage === 'en' ? 'Cancel' : 'रद्द करा'}
               </button>
               <button
                 onClick={handleSaveEdit}
-                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors text-sm font-medium"
+                className="interactive-button flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors text-sm font-medium touch-target"
                 disabled={editContent.trim() === message.content || !editContent.trim()}
               >
                 <Save className="w-3 h-3" />
