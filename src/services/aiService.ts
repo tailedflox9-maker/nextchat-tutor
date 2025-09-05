@@ -1,6 +1,59 @@
 import { APISettings, Conversation, StudySession, QuizQuestion } from '../types';
 import { generateId } from '../utils/helpers';
 
+// Helper function to handle streaming for OpenAI-compatible APIs (like Mistral and Zhipu)
+async function* streamOpenAICompatResponse(url: string, apiKey: string, model: string, messages: { role: string; content: string }[]): AsyncGenerator<string> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: messages,
+      stream: true,
+    }),
+  });
+
+  if (!response.ok || !response.body) {
+    const errorBody = await response.text();
+    console.error("API Error Body:", errorBody);
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.substring(6);
+        if (data.trim() === '[DONE]') {
+          return;
+        }
+        try {
+          const json = JSON.parse(data);
+          const chunk = json.choices?.[0]?.delta?.content;
+          if (chunk) {
+            yield chunk;
+          }
+        } catch (e) {
+          console.error('Error parsing stream chunk:', e, 'Raw data:', data);
+        }
+      }
+    }
+  }
+}
+
 class AiService {
   private settings: APISettings = {
     googleApiKey: '',
@@ -13,73 +66,76 @@ class AiService {
     this.settings = newSettings;
   }
 
-  private async getApiKeyAndUrl(): Promise<{ apiKey: string, url: string }> {
+  public async *generateStreamingResponse(messages: { role: string; content: string }[]): AsyncGenerator<string> {
+    const userMessages = messages.map(m => ({
+      role: m.role,
+      content: m.content
+    }));
+
     switch (this.settings.selectedModel) {
       case 'google':
         if (!this.settings.googleApiKey) throw new Error('Google API key not set');
-        return {
-          apiKey: this.settings.googleApiKey,
-          url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key=${this.settings.googleApiKey}&alt=sse`,
-        };
-      
-      // --- Placeholder for other models ---
-      // To implement these, you would need to add their specific API endpoints and authentication.
-      case 'zhipu':
-        throw new Error('ZhipuAI model is not yet implemented. Please select another model.');
-      case 'mistral-small':
-      case 'mistral-codestral':
-        throw new Error('Mistral models are not yet implemented. Please select another model.');
-      
-      default:
-        throw new Error('Invalid model selected or API key not set for the selected model.');
-    }
-  }
+        const googleUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:streamGenerateContent?key=${this.settings.googleApiKey}&alt=sse`;
+        const googleMessages = userMessages.map(m => ({
+          role: m.role === 'assistant' ? 'model' : m.role,
+          parts: [{ text: m.content }],
+        }));
 
-  public async *generateStreamingResponse(messages: { role: string; content: string }[]): AsyncGenerator<string> {
-    const { url } = await this.getApiKeyAndUrl();
+        const response = await fetch(googleUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: googleMessages }),
+        });
 
-    const formattedMessages = messages.map(m => ({
-      role: m.role === 'assistant' ? 'model' : m.role,
-      parts: [{ text: m.content }],
-    }));
+        if (!response.ok || !response.body) {
+          throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: formattedMessages }),
-    });
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-    if (!response.ok || !response.body) {
-      const errorBody = await response.text();
-      console.error("API Error Body:", errorBody);
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const json = JSON.parse(line.substring(6));
-            const chunk = json.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (chunk) {
-              yield chunk;
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const json = JSON.parse(line.substring(6));
+                const chunk = json.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (chunk) {
+                  yield chunk;
+                }
+              } catch (e) {
+                console.error('Error parsing stream chunk:', e);
+              }
             }
-          } catch (e) {
-            console.error('Error parsing stream chunk:', e);
           }
         }
-      }
+        break;
+
+      case 'zhipu':
+        if (!this.settings.zhipuApiKey) throw new Error('ZhipuAI API key not set');
+        yield* streamOpenAICompatResponse('https://open.bigmodel.cn/api/paas/v4/chat/completions', this.settings.zhipuApiKey, 'glm-4.5-flash', userMessages);
+        break;
+
+      case 'mistral-small':
+        if (!this.settings.mistralApiKey) throw new Error('Mistral API key not set');
+        yield* streamOpenAICompatResponse('https://api.mistral.ai/v1/chat/completions', this.settings.mistralApiKey, 'mistral-small-latest', userMessages);
+        break;
+
+      case 'mistral-codestral':
+        if (!this.settings.mistralApiKey) throw new Error('Mistral API key not set for Codestral');
+        yield* streamOpenAICompatResponse('https://api.mistral.ai/v1/chat/completions', this.settings.mistralApiKey, 'codestral-latest', userMessages);
+        break;
+
+      default:
+        throw new Error('Invalid model selected or API key not set for the selected model.');
     }
   }
 
@@ -96,7 +152,7 @@ class AiService {
     
     Conversation:
     ---
-    ${conversationText.slice(0, 4000)}
+    ${conversationText.slice(0, 6000)}
     ---
     
     Format the output as a single JSON object with a "questions" array. Each question object must have:
@@ -118,7 +174,7 @@ class AiService {
       ]
     }`;
     
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.settings.googleApiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${this.settings.googleApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
