@@ -1,32 +1,23 @@
-import React, { useContext, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Plus, MessageSquare, Settings, Trash2, X, ChevronLeft, ChevronRight,
-  Sparkles, Brain, Cloud, Terminal, Search, Pin, Edit, Users, Wand2, Book,
-  BookOpen, CheckCircle, AlertCircle, Loader2
+  Sparkles, Brain, Cloud, Terminal, Search, Pin, Edit, Book
 } from 'lucide-react';
 import { Conversation, Note } from '../types';
-import { LanguageContext } from '../contexts/LanguageContext';
-import { aiService } from '../services/aiService';
-import { BookProject } from '../types/book';
 
 interface SidebarProps {
   conversations: Conversation[];
   notes: Note[];
-  books: BookProject[];
-  activeView: 'chat' | 'note' | 'book';
+  activeView: 'chat' | 'note';
   currentConversationId: string | null;
   currentNoteId: string | null;
-  currentBookId: string | null;
   onNewConversation: () => void;
-  onNewPersonaConversation: (systemPrompt: string) => void;
   onSelectConversation: (id: string) => void;
-  onSelectNote: (id: string | null) => void;      // CHANGED: Accepts null
-  onSelectBook: (id: string | null) => void;        // CHANGED: Accepts null
+  onSelectNote: (id: string | null) => void;
   onDeleteConversation: (id: string) => void;
   onRenameConversation: (id: string, newTitle: string) => void;
   onTogglePinConversation: (id: string) => void;
   onDeleteNote: (id: string) => void;
-  onDeleteBook: (id: string) => void;
   onOpenSettings: () => void;
   settings: { selectedModel: string };
   onModelChange: (model: any) => void;
@@ -39,21 +30,16 @@ interface SidebarProps {
 export function Sidebar({
   conversations,
   notes,
-  books,
   activeView,
   currentConversationId,
   currentNoteId,
-  currentBookId,
   onNewConversation,
-  onNewPersonaConversation,
   onSelectConversation,
   onSelectNote,
-  onSelectBook,
   onDeleteConversation,
   onRenameConversation,
   onTogglePinConversation,
   onDeleteNote,
-  onDeleteBook,
   onOpenSettings,
   settings,
   onModelChange,
@@ -62,13 +48,10 @@ export function Sidebar({
   onToggleFold,
   isSidebarOpen
 }: SidebarProps) {
-  const { selectedLanguage } = useContext(LanguageContext);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
-  const [view, setView] = useState<'chats' | 'personas' | 'notes' | 'books'>('chats');
-  const [personaPrompt, setPersonaPrompt] = useState('');
-  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [view, setView] = useState<'chats' | 'notes'>('chats');
 
   const models = [
     { id: 'google', icon: Sparkles, name: 'Gemma' },
@@ -93,13 +76,6 @@ export function Sidebar({
     );
   }, [notes, searchQuery]);
 
-  const filteredBooks = useMemo(() => {
-    return books.filter(b =>
-      b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.goal.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [books, searchQuery]);
-
   const handleStartEditing = (conversation: Conversation) => {
     setEditingId(conversation.id);
     setEditingTitle(conversation.title);
@@ -122,40 +98,17 @@ export function Sidebar({
     }
   };
 
-  const handleCreatePersona = () => {
-    if (personaPrompt.trim()) {
-      onNewPersonaConversation(personaPrompt.trim());
-      setPersonaPrompt('');
-      setView('chats');
-    }
-  };
-
-  const handleEnhancePrompt = async () => {
-    if (!personaPrompt.trim()) return;
-    setIsEnhancing(true);
-    try {
-      const enhanced = await aiService.enhancePrompt(personaPrompt);
-      setPersonaPrompt(enhanced);
-    } catch (error) {
-      console.error("Failed to enhance prompt:", error);
-      alert(selectedLanguage === 'en' ? 'Could not enhance prompt. Please check your API key.' : 'प्रॉम्प्ट वाढवता आला नाही. कृपया तुमची API की तपासा.');
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
-
   const sidebarClasses = `bg-[var(--color-sidebar)] flex flex-col h-full border-r border-[var(--color-border)] sidebar transition-all duration-300 ease-in-out fixed lg:static z-50 ${isSidebarOpen ? 'sidebar-open' : 'hidden lg:flex'} ${isFolded ? 'w-14' : 'w-64'}`;
 
   return (
     <aside className={sidebarClasses}>
-      {/* ... Header and Model Selection ... */}
       <div className="p-2 border-b border-[var(--color-border)] flex flex-col gap-2">
         <div className="flex items-center justify-between">
           {!isFolded && (
             <a href="https://tanmay-kalbande.github.io/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group px-2">
               <img src="/white-logo.png" alt="Logo" className="w-7 h-7" />
               <h1 className="text-xl font-bold text-[var(--color-text-primary)] group-hover:text-gray-300 transition-colors">
-                {selectedLanguage === 'en' ? 'AI Tutor' : 'एआय शिक्षक'}
+                AI Tutor
               </h1>
             </a>
           )}
@@ -163,7 +116,7 @@ export function Sidebar({
             <button
               onClick={onOpenSettings}
               className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors"
-              title={selectedLanguage === 'en' ? 'Settings' : 'सेटिंग्ज'}
+              title={'Settings'}
             >
               <Settings className="w-5 h-5" />
             </button>
@@ -179,7 +132,7 @@ export function Sidebar({
             <button
               onClick={onCloseSidebar}
               className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors lg:hidden"
-              title={selectedLanguage === 'en' ? 'Close sidebar' : 'साइडबार बंद करा'}
+              title={'Close sidebar'}
             >
               <X className="w-5 h-5" />
             </button>
@@ -190,13 +143,10 @@ export function Sidebar({
           className={`w-full flex items-center ${isFolded ? 'justify-center' : 'justify-start'} gap-2 px-3 py-2 bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] rounded-lg transition-colors text-[var(--color-accent-text)] shadow-sm font-semibold`}
         >
           <Plus className="w-4 h-4" />
-          {!isFolded && (
-            <span className={selectedLanguage === 'mr' ? 'font-bold' : ''}>
-              {selectedLanguage === 'en' ? 'New chat' : 'नवीन चॅट'}
-            </span>
-          )}
+          {!isFolded && <span>New chat</span>}
         </button>
       </div>
+
       {activeView === 'chat' && (
         <div className="p-2">
           {isFolded ? (
@@ -219,7 +169,7 @@ export function Sidebar({
           ) : (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider px-1">
-                {selectedLanguage === 'en' ? 'AI Model' : 'एआय मॉडेल'}
+                AI Model
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {models.map(model => (
@@ -244,20 +194,19 @@ export function Sidebar({
       )}
 
       <div className={`flex-1 overflow-y-auto p-2 flex flex-col ${activeView === 'chat' ? 'border-t border-[var(--color-border)] mt-2' : ''}`}>
-        {/* ... (Search Bar) ... */}
-        {(view === 'chats' || view === 'notes' || view === 'books') && !isFolded && (
+        {!isFolded && (
           <div className="relative mb-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={selectedLanguage === 'en' ? `Search ${view}...` : `${view === 'chats' ? 'चॅट' : 'नोट्स'} शोधा...`}
+              placeholder={`Search ${view}...`}
               className="w-full bg-[var(--color-card)] border border-transparent focus:border-[var(--color-border)] rounded-lg pl-9 pr-3 py-1.5 text-sm placeholder:text-[var(--color-text-placeholder)] focus:outline-none transition-colors"
             />
           </div>
         )}
-        {/* ... (Lists for Chats, Notes, Books, Personas) ... */}
+
         {view === 'chats' && (
           <div className="space-y-1">
             {filteredConversations.length > 0 ? (
@@ -273,11 +222,7 @@ export function Sidebar({
                   title={isFolded ? conversation.title : undefined}
                 >
                   {conversation.isPinned && <Pin className="w-3 h-3 absolute top-1.5 left-1.5 text-yellow-400" />}
-                  {conversation.isPersona ? (
-                    <Sparkles className="w-4 h-4 flex-shrink-0" />
-                  ) : (
-                    <MessageSquare className="w-4 h-4 flex-shrink-0" />
-                  )}
+                  <MessageSquare className="w-4 h-4 flex-shrink-0" />
                   {!isFolded && (
                     <>
                       {editingId === conversation.id ? (
@@ -339,15 +284,12 @@ export function Sidebar({
             ) : searchQuery ? (
               <div className="text-center py-8 px-4">
                 <MessageSquare className="w-12 h-12 mx-auto text-[var(--color-text-secondary)] opacity-50 mb-3" />
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  {selectedLanguage === 'en'
-                    ? 'No chats found'
-                    : 'कोणतीही चॅट आढळली नाही'}
-                </p>
+                <p className="text-sm text-[var(--color-text-secondary)]">No chats found</p>
               </div>
             ) : null}
           </div>
         )}
+
         {view === 'notes' && !isFolded && (
           <div className="space-y-1">
             {filteredNotes.length > 0 ? (
@@ -376,134 +318,18 @@ export function Sidebar({
                   <p className="text-xs opacity-70 mt-1 line-clamp-2">{note.content}</p>
                 </div>
               ))
-            ) : searchQuery ? (
-              <div className="text-center py-8 px-4">
-                <Book className="w-12 h-12 mx-auto text-[var(--color-text-secondary)] opacity-50 mb-3" />
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  {selectedLanguage === 'en'
-                    ? 'No notes found'
-                    : 'कोणत्याही नोट्स आढळल्या नाहीत'}
-                </p>
-              </div>
-            ) : null}
-          </div>
-        )}
-        {view === 'books' && !isFolded && (
-          <div className="space-y-1">
-            {filteredBooks.length > 0 ? (
-              filteredBooks.map((book) => (
-                <div
-                  key={book.id}
-                  onClick={() => onSelectBook(book.id)}
-                  className={`group p-2.5 rounded-lg cursor-pointer ${
-                    activeView === 'book' && currentBookId === book.id
-                      ? 'bg-[var(--color-accent-bg)] text-[var(--color-accent-text)]'
-                      : 'hover:bg-[var(--color-card)] text-[var(--color-text-primary)]'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        {book.status === 'completed' ? (
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                        ) : book.status === 'error' ? (
-                          <AlertCircle className="w-4 h-4 text-red-500" />
-                        ) : (
-                          <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-                        )}
-                        <span className="flex-1 text-sm font-semibold truncate pr-2">{book.title}</span>
-                      </div>
-                      <p className="text-xs opacity-70 line-clamp-1">{book.goal}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {book.status !== 'completed' && book.status !== 'error' && (
-                          <div className="flex-1">
-                            <div className="w-full bg-[var(--color-border)] rounded-full h-1">
-                              <div
-                                className="bg-blue-500 h-1 rounded-full transition-all duration-300"
-                                style={{ width: `${book.progress}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                        <span className="text-xs opacity-60">{book.progress}%</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteBook(book.id);
-                      }}
-                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-900/30 text-red-400"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : searchQuery ? (
-              <div className="text-center py-8 px-4">
-                <Book className="w-12 h-12 mx-auto text-[var(--color-text-secondary)] opacity-50 mb-3" />
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  {selectedLanguage === 'en'
-                    ? 'No books found'
-                    : 'कोणतीही पुस्तके आढळली नाहीत'}
-                </p>
-              </div>
             ) : (
               <div className="text-center py-8 px-4">
                 <Book className="w-12 h-12 mx-auto text-[var(--color-text-secondary)] opacity-50 mb-3" />
-                <p className="text-sm text-[var(--color-text-secondary)] mb-2">
-                  {selectedLanguage === 'en'
-                    ? 'No books created yet'
-                    : 'अजून कोणतीही पुस्तके तयार केली नाहीत'}
-                </p>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  {selectedLanguage === 'en'
-                    ? 'Generate comprehensive learning books with AI'
-                    : 'AI सह सर्वसमावेशक शिकण्याच्या पुस्तका तयार करा'}
-                </p>
+                <p className="text-sm text-[var(--color-text-secondary)]">No notes found</p>
               </div>
             )}
-          </div>
-        )}
-        {view === 'personas' && !isFolded && (
-           <div className="p-2 flex flex-col h-full">
-            <h3 className="text-base font-semibold mb-2">
-              {selectedLanguage === 'en' ? 'Create a Persona' : 'एक Persona तयार करा'}
-            </h3>
-            <p className="text-xs text-[var(--color-text-secondary)] mb-4">
-              {selectedLanguage === 'en' ? 'Define a custom behavior for the AI.' : 'AI साठी सानुकूल वर्तणूक परिभाषित करा.'}
-            </p>
-            <textarea
-              value={personaPrompt}
-              onChange={(e) => setPersonaPrompt(e.target.value)}
-              placeholder={selectedLanguage === 'en' ? 'e.g., You are a master chef...' : 'उदा., तुम्ही एक मास्टर शेफ आहात...'}
-              className="w-full flex-1 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-2 text-sm resize-none mb-4"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={handleEnhancePrompt}
-                disabled={!personaPrompt.trim() || isEnhancing}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg text-sm font-semibold disabled:opacity-50"
-              >
-                <Wand2 className={`w-4 h-4 ${isEnhancing ? 'animate-spin' : ''}`} />
-                <span>{selectedLanguage === 'en' ? 'Enhance' : 'वाढवा'}</span>
-              </button>
-              <button
-                onClick={handleCreatePersona}
-                disabled={!personaPrompt.trim() || isEnhancing}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] rounded-lg text-[var(--color-accent-text)] font-semibold disabled:opacity-50"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>{selectedLanguage === 'en' ? 'Start Chat' : 'चॅट सुरू करा'}</span>
-              </button>
-            </div>
           </div>
         )}
       </div>
 
       <div className="p-2 border-t border-[var(--color-border)]">
-        <div className={`space-y-1 ${isFolded ? 'flex flex-col' : 'grid grid-cols-4 gap-1'}`}>
+        <div className={`space-y-1 ${isFolded ? 'flex flex-col' : 'grid grid-cols-2 gap-1'}`}>
           <button
             onClick={() => setView('chats')}
             className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${
@@ -511,34 +337,16 @@ export function Sidebar({
             }`}
           >
             <MessageSquare className="w-5 h-5" />
-            {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Chats' : 'चॅट्स'}</span>}
+            {!isFolded && <span className="text-xs font-semibold">Chats</span>}
           </button>
           <button
-            onClick={() => setView('personas')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${
-              view === 'personas' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-            }`}
-          >
-            <Users className="w-5 h-5" />
-            {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Personas' : 'Personas'}</span>}
-          </button>
-          <button
-            onClick={() => { setView('notes'); onSelectNote(null); }} // THE FIX
+            onClick={() => { setView('notes'); onSelectNote(null); }}
             className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${
               view === 'notes' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
             }`}
           >
             <Book className="w-5 h-5" />
-            {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Notes' : 'नोट्स'}</span>}
-          </button>
-          <button
-            onClick={() => { setView('books'); onSelectBook(null); }} // THE FIX
-            className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${
-              view === 'books' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-            }`}
-          >
-            <BookOpen className="w-5 h-5" />
-            {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Books' : 'पुस्तके'}</span>}
+            {!isFolded && <span className="text-xs font-semibold">Notes</span>}
           </button>
         </div>
         {!isFolded && (
