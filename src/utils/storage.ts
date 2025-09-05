@@ -1,4 +1,4 @@
-import { Conversation, APISettings, Note } from '../types';
+import { Conversation, APISettings, Note, TutorMode } from '../types';
 
 const CONVERSATIONS_KEY = 'ai-tutor-conversations';
 const SETTINGS_KEY = 'ai-tutor-settings';
@@ -9,6 +9,7 @@ const defaultSettings: APISettings = {
   zhipuApiKey: '',
   mistralApiKey: '',
   selectedModel: 'google',
+  selectedTutorMode: 'standard', // Default tutor mode
 };
 
 export const storageUtils = {
