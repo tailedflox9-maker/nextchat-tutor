@@ -37,6 +37,7 @@ interface BookViewProps {
   onAssembleBook: (book: BookProject, session: BookSession) => Promise<void>;
   onSelectBook: (id: string | null) => void;
   onDeleteBook: (id: string) => void;
+  onRetryModuleGeneration: (book: BookProject) => Promise<void>;
   hasApiKey: boolean;
 }
 
@@ -60,6 +61,7 @@ export function BookView({
   onAssembleBook,
   onSelectBook, 
   onDeleteBook,
+  onRetryModuleGeneration,
   hasApiKey 
 }: BookViewProps) {
   const { selectedLanguage } = useContext(LanguageContext);
@@ -614,7 +616,15 @@ export function BookView({
                       <AlertCircle className="w-5 h-5 text-red-500" />
                       <h3 className="text-lg font-semibold text-red-400">Generation Error</h3>
                     </div>
-                    <p className="text-red-200">{currentBook.error}</p>
+                    <p className="text-red-200 mb-4">{currentBook.error}</p>
+                    <button
+                      onClick={() => onRetryModuleGeneration(currentBook)}
+                      disabled={isGenerating}
+                      className="w-full sm:w-auto interactive-button flex items-center justify-center gap-2 px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold rounded-lg"
+                    >
+                      {isGenerating ? <Loader2 className="w-5 h-5 animate-spin"/> : <RefreshCw className="w-5 h-5" />}
+                      <span>{isGenerating ? (selectedLanguage === 'en' ? 'Retrying...' : 'पुन्हा प्रयत्न करत आहे...') : (selectedLanguage === 'en' ? 'Retry Generation' : 'पुन्हा निर्माण करा')}</span>
+                    </button>
                   </div>
                 )}
 
