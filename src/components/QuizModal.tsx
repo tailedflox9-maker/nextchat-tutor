@@ -1,7 +1,6 @@
-import React, { useState, useMemo, useEffect, useContext } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, Check, XCircle, CheckCircle, Lightbulb } from 'lucide-react';
 import { StudySession } from '../types';
-import { LanguageContext } from '../contexts/LanguageContext';
 
 interface QuizModalProps {
   isOpen: boolean;
@@ -10,13 +9,11 @@ interface QuizModalProps {
 }
 
 export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
-  const { selectedLanguage } = useContext(LanguageContext);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [showFeedback, setShowFeedback] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
-
   const currentQuestion = session?.questions[currentQuestionIndex];
 
   // Reset state when a new session is passed or the modal is closed
@@ -49,36 +46,23 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
 
   const score = useMemo(() => {
     if (!session) return 0;
-    return session.questions.reduce((acc, question) => {
-      return userAnswers[question.id] === question.answer ? acc + 1 : acc;
+    return session.questions.reduce((acc, question, index) => {
+      const correctAnswer = question.options[question.correctAnswer];
+      return userAnswers[question.id] === correctAnswer ? acc + 1 : acc;
     }, 0);
   }, [quizCompleted, session, userAnswers]);
-  
+
   const scorePercentage = useMemo(() => {
     if (!session || session.questions.length === 0) return 0;
     return (score / session.questions.length) * 100;
   }, [score, session]);
 
   const getScoreFeedback = useMemo(() => {
-    const feedbacks = {
-      en: {
-        100: "Perfect Score! You're a master!",
-        75: "Great job! You know your stuff.",
-        50: "Good effort! A little more review might help.",
-        0: "Keep studying! You'll get it next time.",
-      },
-      mr: {
-        100: "उत्तम गुण! तुम्ही निपुण आहात!",
-        75: "उत्तम काम! तुम्हाला चांगली माहिती आहे.",
-        50: "चांगला प्रयत्न! थोडा अधिक सराव उपयुक्त ठरेल.",
-        0: "अभ्यास सुरू ठेवा! पुढच्या वेळी नक्की जमेल.",
-      }
-    };
-    if (scorePercentage === 100) return feedbacks[selectedLanguage][100];
-    if (scorePercentage >= 75) return feedbacks[selectedLanguage][75];
-    if (scorePercentage >= 50) return feedbacks[selectedLanguage][50];
-    return feedbacks[selectedLanguage][0];
-  }, [scorePercentage, selectedLanguage]);
+    if (scorePercentage === 100) return "Perfect Score! You're a master!";
+    if (scorePercentage >= 75) return "Great job! You know your stuff.";
+    if (scorePercentage >= 50) return "Good effort! A little more review might help.";
+    return "Keep studying! You'll get it next time.";
+  }, [scorePercentage]);
 
   if (!isOpen || !session) return null;
 
@@ -90,19 +74,19 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
       <div className="animate-fadeIn">
         <p className="mb-4 text-center">
           <span className="bg-[var(--color-card)] px-3 py-1 rounded-full text-sm font-semibold text-[var(--color-text-secondary)]">
-            {selectedLanguage === 'en' ? 'Question' : 'प्रश्न'} {currentQuestionIndex + 1} / {session.questions.length}
+            Question {currentQuestionIndex + 1} / {session.questions.length}
           </span>
         </p>
         <h3 className="text-xl md:text-2xl font-bold text-center text-[var(--color-text-primary)] mb-8 leading-tight">
           {currentQuestion.question}
         </h3>
-        
+
         <div className="space-y-3">
           {currentQuestion.options?.map((option, index) => {
             const isSelected = selectedAnswer === option;
-            const isCorrectAnswer = currentQuestion.answer === option;
+            const isCorrectAnswer = currentQuestion.correctAnswer === index;
             let buttonClass = 'bg-[var(--color-card)] border-transparent hover:bg-[var(--color-border)]';
-            
+
             if (showFeedback) {
               if (isCorrectAnswer) {
                 buttonClass = 'bg-green-900/50 border-green-500/60 text-green-300';
@@ -112,7 +96,6 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
                  buttonClass = 'bg-[var(--color-card)] border-transparent opacity-60';
               }
             }
-
             return (
               <button
                 key={option}
@@ -132,7 +115,7 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
             );
           })}
         </div>
-        
+
         {showFeedback && currentQuestion.explanation && (
           <div className="mt-8 p-4 rounded-lg bg-[var(--color-bg)] animate-fade-in-up border border-[var(--color-border)] flex items-start gap-3">
             <Lightbulb className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
@@ -142,12 +125,12 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
       </div>
     );
   };
-  
+
   const renderCompletedContent = () => (
     <div className="text-center flex flex-col items-center justify-center h-full p-4 sm:p-8 animate-fadeIn">
       <CheckCircle className="w-16 h-16 text-green-400 mb-4" />
       <h3 className="text-2xl font-bold mb-2">
-        {selectedLanguage === 'en' ? 'Quiz Completed!' : 'प्रश्नमंजुषा पूर्ण!'}
+        Quiz Completed!
       </h3>
       <p className="text-base text-[var(--color-text-secondary)] mb-6">{getScoreFeedback}</p>
       <p className="text-6xl font-bold text-[var(--color-accent-bg)] mb-2">
@@ -158,7 +141,7 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-      <div 
+      <div
         className="relative w-full max-w-2xl bg-[var(--color-sidebar)] border border-[var(--color-border)] rounded-2xl shadow-2xl flex flex-col animate-fade-in-up overflow-hidden max-h-[90vh] max-h-[90dvh]"
         role="dialog"
         aria-modal="true"
@@ -166,16 +149,16 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
       >
         {/* Progress Bar */}
         <div className="absolute top-0 left-0 w-full bg-[var(--color-card)] h-1.5">
-          <div 
+          <div
             className="bg-[var(--color-accent-bg)] h-1.5 rounded-r-full transition-all duration-300 ease-out"
             style={{ width: `${quizCompleted ? 100 : progress}%` }}
           />
         </div>
-        
+
         {/* Header */}
         <div className="p-4 sm:p-5 flex items-center justify-between border-b border-[var(--color-border)]">
           <h2 id="quiz-title" className="text-lg font-bold">
-            {selectedLanguage === 'en' ? 'Study Quiz' : 'अभ्यास प्रश्नमंजुषा'}
+            Study Quiz
           </h2>
           <button onClick={onClose} className="interactive-button w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-card)] transition-colors" aria-label="Close quiz">
             <X className="w-5 h-5" />
@@ -186,20 +169,20 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
         <div className="p-4 sm:p-6 md:p-8 overflow-y-auto">
           {quizCompleted ? renderCompletedContent() : renderQuizContent()}
         </div>
-        
+
         {/* Footer */}
         <div className="flex justify-end p-4 border-t border-[var(--color-border)] bg-[var(--color-bg)]/50 mt-auto">
           {quizCompleted ? (
             <button onClick={onClose} className="w-full sm:w-auto interactive-button px-6 py-2.5 rounded-lg font-bold bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] hover:bg-[var(--color-accent-bg-hover)]">
-              {selectedLanguage === 'en' ? 'Finish' : 'समाप्त'}
+              Finish
             </button>
           ) : (
-            <button 
-              onClick={handleNextQuestion} 
+            <button
+              onClick={handleNextQuestion}
               disabled={!showFeedback}
               className="w-full sm:w-auto interactive-button px-6 py-2.5 rounded-lg font-bold bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] hover:bg-[var(--color-accent-bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {selectedLanguage === 'en' ? 'Next' : 'पुढे'}
+              Next
             </button>
           )}
         </div>
