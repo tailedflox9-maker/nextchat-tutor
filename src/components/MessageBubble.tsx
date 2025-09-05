@@ -319,4 +319,36 @@ export function MessageBubble({
             </p>
           </div>
         ) : (
-          <div className={`prose prose-invert prose-base max-w-none leading-relaxed flex-1 ${isUser ?
+          <div className={`prose prose-invert prose-base max-w-none leading-relaxed flex-1 ${isUser ? 'font-semibold' : 'font-normal'}`}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={markdownComponents}
+            >
+              {message.content}
+            </ReactMarkdown>
+            {isStreaming && <StreamingIndicator />}
+          </div>
+        )}
+        
+        {!isEditing && !isStreaming && message.content.length > 0 && onEditMessage && (
+          <ActionButtons
+            isUser={isUser}
+            onRegenerate={onRegenerateResponse ? handleRegenerate : undefined}
+            onEdit={handleEdit}
+            onCopy={handleCopy}
+            onSaveNote={handleSaveNote}
+            onExport={handleExport}
+            copied={copied}
+            noteSaved={noteSaved}
+          />
+        )}
+      </div>
+      
+      {isUser && (
+        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-card)]">
+          <Smile className="w-4 h-4 text-[var(--color-text-secondary)]" />
+        </div>
+      )}
+    </div>
+  );
+}
