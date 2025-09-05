@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useContext, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { Conversation, Message } from '../types';
-import { LanguageContext } from '../contexts/LanguageContext';
 
 interface ChatAreaProps {
   conversation: Conversation | undefined;
@@ -31,15 +30,14 @@ export function ChatArea({
   onEditMessage,
   onRegenerateResponse,
 }: ChatAreaProps) {
-  const { selectedLanguage } = useContext(LanguageContext);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
-  
-  const allMessages = useMemo(() => 
-    streamingMessage ? [...(conversation?.messages || []), streamingMessage] : conversation?.messages || [], 
+
+  const allMessages = useMemo(() =>
+    streamingMessage ? [...(conversation?.messages || []), streamingMessage] : conversation?.messages || [],
     [conversation?.messages, streamingMessage]
   );
-  
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
@@ -57,18 +55,16 @@ export function ChatArea({
       <div className="chat-area">
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center max-w-md w-full px-4">
-            <img 
-              src="/white-logo.png" 
-              alt="AI Tutor Logo" 
-              className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6" 
+            <img
+              src="/white-logo.png"
+              alt="AI Tutor Logo"
+              className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6"
             />
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--color-text-primary)] mb-2 sm:mb-4">
-              {selectedLanguage === 'en' ? 'AI Tutor' : 'एआय शिक्षक'}
+              AI Tutor
             </h2>
             <p className="text-sm sm:text-base text-[var(--color-text-secondary)] opacity-80">
-              {selectedLanguage === 'en' 
-                ? 'Start a conversation to begin learning' 
-                : 'शिकण्यास सुरुवात करण्यासाठी संभाषण सुरू करा'}
+              Start a conversation to begin learning
             </p>
           </div>
         </div>
@@ -89,7 +85,7 @@ export function ChatArea({
 
   return (
     <div className="chat-area">
-      <div 
+      <div
         ref={chatMessagesRef}
         className="chat-messages scroll-container"
       >
@@ -109,7 +105,7 @@ export function ChatArea({
           <div ref={messagesEndRef} className="h-1 flex-shrink-0" />
         </div>
       </div>
-      
+
       <div className="chat-input-container mobile-chat-area">
         <ChatInput
           onSendMessage={onSendMessage}
