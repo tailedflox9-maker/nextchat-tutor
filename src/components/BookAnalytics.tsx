@@ -2,9 +2,9 @@
 import React, { useContext, useMemo } from 'react';
 import { 
   BarChart3, Clock, BookOpen, Target, Download, 
-  FileText, Brain, TrendingUp, Hash
+  FileText, Brain, Hash
 } from 'lucide-react';
-import { BookProject, BookAnalytics as BookAnalyticsType } from '../types';
+import { BookProject } from '../types';
 import { bookEnhancementService } from '../services/bookEnhancements';
 import { LanguageContext } from '../contexts/LanguageContext';
 
@@ -138,26 +138,6 @@ export function BookAnalytics({ book }: BookAnalyticsProps) {
         </div>
       </div>
 
-      {/* Key Terms */}
-      <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <TrendingUp className="w-5 h-5 text-blue-500" />
-          <h4 className="text-lg font-semibold text-[var(--color-text-primary)]">
-            {selectedLanguage === 'en' ? 'Key Terms' : 'मुख्य संज्ञा'}
-          </h4>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {analytics.keyTerms.map((term, index) => (
-            <span 
-              key={index}
-              className="px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full text-sm font-medium"
-            >
-              {term}
-            </span>
-          ))}
-        </div>
-      </div>
-
       {/* Study Materials */}
       <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
@@ -203,27 +183,6 @@ export function BookAnalytics({ book }: BookAnalyticsProps) {
               </div>
             </div>
           </button>
-        </div>
-
-        <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-          <div className="flex items-start gap-3">
-            <div className="flex items-center justify-center w-8 h-8 bg-yellow-500/20 rounded-lg flex-shrink-0">
-              <FileText className="w-4 h-4 text-yellow-500" />
-            </div>
-            <div>
-              <h5 className="font-semibold text-yellow-400 mb-1">
-                {selectedLanguage === 'en' ? 'Generated Study Cards' : 'तयार केलेली अभ्यास कार्डे'}
-              </h5>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-2">
-                {studyMaterials.flashcards.length} {selectedLanguage === 'en' ? 'flashcards available for key terms' : 'मुख्य संज्ञांसाठी फ्लॅशकार्ड उपलब्ध'}
-              </p>
-              <div className="text-xs text-[var(--color-text-secondary)]">
-                {selectedLanguage === 'en' 
-                  ? 'Use these for spaced repetition and memory reinforcement'
-                  : 'स्पेसड रिपिटिशन आणि मेमरी रीइन्फोर्समेंटसाठी वापरा'}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
