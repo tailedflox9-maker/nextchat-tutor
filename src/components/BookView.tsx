@@ -15,7 +15,6 @@ import { bookEnhancementService, BookTemplate } from '../services/bookEnhancemen
 import { BookTemplateSelector } from './BookTemplateSelector';
 import { BookAnalytics } from './BookAnalytics';
 
-// CodeBlock for rendering markdown in Read Mode
 const CodeBlock = React.memo(({ language, children }: { language: string; children: string; }) => {
   const codeContent = String(children).replace(/\n$/, '');
   return (
