@@ -119,7 +119,7 @@ function App() {
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
-  const handleSelectNote = (id: string) => {
+  const handleSelectNote = (id: string | null) => { // CHANGED: Now accepts null
     setActiveView('note');
     setCurrentNoteId(id);
     setCurrentConversationId(null);
@@ -127,7 +127,7 @@ function App() {
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
-  const handleSelectBook = (id: string) => {
+  const handleSelectBook = (id: string | null) => { // CHANGED: Now accepts null
     setActiveView('book');
     setCurrentBookId(id);
     setCurrentConversationId(null);
