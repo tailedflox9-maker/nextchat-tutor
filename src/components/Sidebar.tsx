@@ -197,51 +197,53 @@ export function Sidebar({
           )}
         </button>
       </div>
-      <div className="p-2">
-        {isFolded ? (
-          <div className="space-y-2">
-            {models.map(model => (
-              <button
-                key={model.id}
-                onClick={() => onModelChange(model.id as any)}
-                className={`w-full flex justify-center items-center p-2 rounded-lg transition-all duration-200 border ${
-                  settings.selectedModel === model.id
-                    ? 'bg-[var(--color-card)] border-[var(--color-border)] text-white'
-                    : 'bg-transparent border-transparent hover:bg-[var(--color-card)] text-[var(--color-text-secondary)] hover:text-white'
-                }`}
-                title={model.name}
-              >
-                <model.icon className="w-5 h-5" />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider px-1">
-              {selectedLanguage === 'en' ? 'AI Model' : 'एआय मॉडेल'}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
+      {activeView === 'chat' && (
+        <div className="p-2">
+          {isFolded ? (
+            <div className="space-y-2">
               {models.map(model => (
                 <button
                   key={model.id}
                   onClick={() => onModelChange(model.id as any)}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-200 border transform hover:scale-105 active:scale-100 ${
+                  className={`w-full flex justify-center items-center p-2 rounded-lg transition-all duration-200 border ${
                     settings.selectedModel === model.id
-                      ? 'bg-[var(--color-card)] border-[var(--color-border)] text-white scale-105'
+                      ? 'bg-[var(--color-card)] border-[var(--color-border)] text-white'
                       : 'bg-transparent border-transparent hover:bg-[var(--color-card)] text-[var(--color-text-secondary)] hover:text-white'
                   }`}
                   title={model.name}
                 >
-                  <model.icon className="w-4 h-4" />
-                  <span className="text-xs font-semibold">{model.name}</span>
+                  <model.icon className="w-5 h-5" />
                 </button>
               ))}
             </div>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider px-1">
+                {selectedLanguage === 'en' ? 'AI Model' : 'एआय मॉडेल'}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {models.map(model => (
+                  <button
+                    key={model.id}
+                    onClick={() => onModelChange(model.id as any)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-200 border transform hover:scale-105 active:scale-100 ${
+                      settings.selectedModel === model.id
+                        ? 'bg-[var(--color-card)] border-[var(--color-border)] text-white scale-105'
+                        : 'bg-transparent border-transparent hover:bg-[var(--color-card)] text-[var(--color-text-secondary)] hover:text-white'
+                    }`}
+                    title={model.name}
+                  >
+                    <model.icon className="w-4 h-4" />
+                    <span className="text-xs font-semibold">{model.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
-      <div className="flex-1 overflow-y-auto p-2 border-t border-[var(--color-border)] mt-2 flex flex-col">
+      <div className={`flex-1 overflow-y-auto p-2 flex flex-col ${activeView === 'chat' ? 'border-t border-[var(--color-border)] mt-2' : ''}`}>
         {/* ... (Search Bar) ... */}
         {(view === 'chats' || view === 'notes' || view === 'books') && !isFolded && (
           <div className="relative mb-2">
