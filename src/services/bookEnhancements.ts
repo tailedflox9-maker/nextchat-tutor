@@ -1,5 +1,5 @@
 // src/services/bookEnhancements.ts
-import { BookProject, BookModule } from '../types';
+import { BookProject } from '../types';
 import { generateId } from '../utils/helpers';
 
 export interface BookTemplate {
