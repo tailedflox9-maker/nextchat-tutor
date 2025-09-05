@@ -1,8 +1,12 @@
-import React, { useState, useContext, useEffect, ReactNode } from 'react';
+import React, { useState, useContext, useEffect, ReactNode, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { 
   Book, Plus, Download, Trash2, Clock, CheckCircle, 
   AlertCircle, Loader2, BookOpen, Target, Users, Brain,
-  FileText, Sparkles, BarChart3, ListChecks, Play, RefreshCw, Box
+  FileText, Sparkles, BarChart3, ListChecks, Play, RefreshCw, Box, BookText
 } from 'lucide-react';
 import { BookProject, BookSession } from '../types/book';
 import { LanguageContext } from '../contexts/LanguageContext';
@@ -10,6 +14,21 @@ import { bookService } from '../services/bookService';
 import { bookEnhancementService, BookTemplate } from '../services/bookEnhancements';
 import { BookTemplateSelector } from './BookTemplateSelector';
 import { BookAnalytics } from './BookAnalytics';
+
+// CodeBlock for rendering markdown in Read Mode
+const CodeBlock = React.memo(({ language, children }: { language: string; children: string; }) => {
+  const codeContent = String(children).replace(/\n$/, '');
+  return (
+    <SyntaxHighlighter 
+      style={vscDarkPlus} 
+      language={language} 
+      PreTag="div" 
+      className="!bg-[#121212] rounded-md !p-4"
+    >
+      {codeContent}
+    </SyntaxHighlighter>
+  );
+});
 
 interface BookViewProps {
   books: BookProject[];
@@ -47,7 +66,7 @@ export function BookView({
   const { selectedLanguage } = useContext(LanguageContext);
   const [view, setView] = useState<'list' | 'create' | 'detail'>('list');
   const [creationStep, setCreationStep] = useState<'template' | 'form'>('template');
-  const [detailTab, setDetailTab] = useState<'overview' | 'analytics'>('overview');
+  const [detailTab, setDetailTab] = useState<'overview' | 'analytics' | 'read'>('overview');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAssembling, setIsAssembling] = useState(false);
 
@@ -140,6 +159,38 @@ export function BookView({
     };
     return statusMap[status] || status;
   };
+
+  const markdownComponents = useMemo(() => ({
+    code({ node, inline, className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || '');
+      return !inline && match ? (
+        <CodeBlock language={match[1]} children={String(children)} />
+      ) : (
+        <code className="bg-[var(--color-bg)] px-1.5 py-0.5 rounded text-sm" {...props}>
+          {children}
+        </code>
+      );
+    },
+    table({ children }: any) {
+      return (
+        <div className="overflow-x-auto my-4">
+          <table className="border-collapse border border-[var(--color-border)] w-full">
+            {children}
+          </table>
+        </div>
+      );
+    },
+    th({ children }: any) {
+      return (
+        <th className="border border-[var(--color-border)] p-2 bg-[var(--color-sidebar)] font-semibold">
+          {children}
+        </th>
+      );
+    },
+    td({ children }: any) {
+      return <td className="border border-[var(--color-border)] p-2">{children}</td>;
+    },
+  }), []);
 
   if (view === 'list') {
     return (
@@ -417,7 +468,7 @@ export function BookView({
         <div className="p-4 sm:p-6 border-b border-[var(--color-border)]">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <button onClick={() => setView('list')} className="p-2 hover:bg-[var(--color-card)] rounded-lg transition-colors">
+              <button onClick={() => { setView('list'); onSelectBook(null); }} className="p-2 hover:bg-[var(--color-card)] rounded-lg transition-colors">
                 <Book className="w-5 h-5" />
               </button>
               <div>
@@ -447,6 +498,7 @@ export function BookView({
             <div className="mt-4 flex items-center gap-2 p-1 bg-[var(--color-bg)] rounded-lg">
               <DetailTabButton label={selectedLanguage === 'en' ? 'Overview' : 'विहंगावलोकन'} Icon={ListChecks} isActive={detailTab === 'overview'} onClick={() => setDetailTab('overview')} />
               <DetailTabButton label={selectedLanguage === 'en' ? 'Analytics' : 'विश्लेषण'} Icon={BarChart3} isActive={detailTab === 'analytics'} onClick={() => setDetailTab('analytics')} />
+              <DetailTabButton label={selectedLanguage === 'en' ? 'Read Book' : 'पुस्तक वाचा'} Icon={BookText} isActive={detailTab === 'read'} onClick={() => setDetailTab('read')} />
             </div>
           )}
         </div>
@@ -454,6 +506,12 @@ export function BookView({
           <div className="max-w-4xl mx-auto">
             {detailTab === 'analytics' && currentBook.status === 'completed' ? (
               <BookAnalytics book={currentBook} />
+            ) : detailTab === 'read' && currentBook.status === 'completed' ? (
+              <article className="prose prose-invert prose-base sm:prose-lg max-w-none leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                  {currentBook.finalBook || ''}
+                </ReactMarkdown>
+              </article>
             ) : (
               <div className="space-y-6">
                 <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
@@ -521,7 +579,7 @@ export function BookView({
                     </button>
                   </div>
                 )}
-
+                
                 {currentBook.roadmap && (
                   <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
                     <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Learning Roadmap</h3>
@@ -570,7 +628,7 @@ export function BookView({
                       </pre>
                     </div>
                     <p className="text-xs text-[var(--color-text-secondary)] mt-2">
-                      Showing first 2000 characters. Download the full book to read everything.
+                      Showing first 2000 characters. Download or use Read Mode for the full book.
                     </p>
                   </div>
                 )}
