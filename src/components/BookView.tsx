@@ -463,7 +463,7 @@ export function BookView({
                   className="flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] text-[var(--color-accent-text)] text-sm font-semibold rounded-lg transition-colors disabled:opacity-60"
                 >
                   {isPdfGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-                  <span>{isPdfGenerating ? 'Creating...' : 'Save as PDF'}</span>
+                  <span>{isPdfGenerating ? (selectedLanguage === 'en' ? 'Exporting...' : 'निर्यात करत आहे...') : (selectedLanguage === 'en' ? 'Export PDF' : 'PDF निर्यात करा')}</span>
                 </button>
               </div>
             )}
