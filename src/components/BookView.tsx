@@ -1,4 +1,3 @@
-// src/components/BookView.tsx
 import React, { useState, useContext, useEffect } from 'react';
 import { 
   Book, Plus, Download, Eye, Trash2, Clock, CheckCircle, 
@@ -54,7 +53,6 @@ export function BookView({
     setIsGenerating(true);
     setProgress(null);
     
-    // Set up progress callback
     bookService.setProgressCallback(setProgress);
     
     try {
@@ -108,7 +106,6 @@ export function BookView({
     return statusMap[status] || status;
   };
 
-  // List View
   if (view === 'list') {
     return (
       <div className="flex-1 flex flex-col h-full">
@@ -251,7 +248,6 @@ export function BookView({
     );
   }
 
-  // Create Book View
   if (view === 'create') {
     return (
       <div className="flex-1 flex flex-col h-full">
@@ -415,7 +411,6 @@ export function BookView({
     );
   }
 
-  // Detail View
   if (view === 'detail' && currentBook) {
     return (
       <div className="flex-1 flex flex-col h-full">
@@ -461,7 +456,6 @@ export function BookView({
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="max-w-4xl mx-auto space-y-6">
-            {/* Book Info */}
             <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
               <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                 {selectedLanguage === 'en' ? 'Book Details' : 'पुस्तकाचे तपशील'}
@@ -500,7 +494,6 @@ export function BookView({
               </div>
             </div>
 
-            {/* Progress */}
             {currentBook.status !== 'completed' && currentBook.status !== 'error' && (
               <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
@@ -520,7 +513,6 @@ export function BookView({
               </div>
             )}
 
-            {/* Roadmap */}
             {currentBook.roadmap && (
               <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
@@ -559,7 +551,6 @@ export function BookView({
               </div>
             )}
 
-            {/* Error Display */}
             {currentBook.status === 'error' && currentBook.error && (
               <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-3">
@@ -572,7 +563,6 @@ export function BookView({
               </div>
             )}
 
-            {/* Completed Book Preview */}
             {currentBook.status === 'completed' && currentBook.finalBook && (
               <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
@@ -597,3 +587,4 @@ export function BookView({
   }
 
   return null;
+}
