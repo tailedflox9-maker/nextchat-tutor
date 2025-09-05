@@ -145,7 +145,13 @@ class BookGenerationService {
     session: BookSession
   ): Promise<BookModule> {
     const previousModules = book.modules.filter(m => m.status === 'completed');
-    const previousContent = previousModules.length > 0 ? 
+    const isFirstModule = previousModules.length === 0;
+
+    const introInstruction = isFirstModule
+      ? "(This is the first chapter. Provide a general introduction to the topic to set the stage for the book.)"
+      : "(Brief overview connecting to previous modules)";
+
+    const previousContent = !isFirstModule ? 
       `\n\nPREVIOUS MODULES CONTEXT:\n${previousModules.map(m => `${m.title}:\n${m.content.substring(0, 300)}...`).join('\n\n')}` : 
       '';
 
@@ -160,7 +166,7 @@ class BookGenerationService {
 
       Requirements:
       - Write a complete, detailed chapter (2000-4000 words)
-      - Build upon previous modules naturally
+      - ${isFirstModule ? 'Do NOT reference any \'previous modules\'.' : 'Build upon previous modules naturally.'}
       - Include practical examples and code snippets where relevant
       - Use clear, engaging language
       - Add section headers with ## markdown syntax
@@ -172,7 +178,7 @@ class BookGenerationService {
       ## ${roadmapModule.title}
       
       ### Introduction
-      (Brief overview connecting to previous modules)
+      ${introInstruction}
       
       ### Core Concepts
       (Main learning content with examples)
@@ -195,7 +201,7 @@ class BookGenerationService {
 
       आवश्यकता:
       - संपूर्ण, तपशीलवार अध्याय लिहा (2000-4000 शब्द)
-      - मागील मॉड्यूल्सवर नैसर्गिकपणे आधारित करा
+      - ${isFirstModule ? '\'मागील मॉड्यूल्सचा\' कोणताही संदर्भ देऊ नका.' : 'मागील मॉड्यूल्सवर नैसर्गिकपणे आधारित करा.'}
       - व्यावहारिक उदाहरणे आणि कोड स्निपेट्स समाविष्ट करा
       - स्पष्ट, आकर्षक भाषा वापरा
       - ## मार्कडाउन सिंटॅक्ससह विभाग शीर्षके जोडा
@@ -206,7 +212,7 @@ class BookGenerationService {
       ## ${roadmapModule.title}
       
       ### परिचय
-      (मागील मॉड्यूल्सशी जोडणारे संक्षिप्त विहंगावलोकन)
+      ${introInstruction}
       
       ### मुख्य संकल्पना
       (उदाहरणांसह मुख्य शिकण्याची सामग्री)
