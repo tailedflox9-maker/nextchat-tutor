@@ -6,14 +6,19 @@ import { InstallPrompt } from './components/InstallPrompt';
 import { SettingsModal } from './components/SettingsModal';
 import { QuizModal } from './components/QuizModal';
 import { Conversation, Message, APISettings, Note, StudySession } from './types';
-import { aiService } from './services/aiService';
-import { storageUtils } from './utils/storage';
 import { generateId, generateConversationTitle } from './utils/helpers';
 import { usePWA } from './hooks/usePWA';
 import { Menu } from 'lucide-react';
 import { LanguageContext } from './contexts/LanguageContext';
+import { storageUtils } from './utils/storage';
+import { aiService } from './services/aiService';
 
-type ActiveView = 'chat' | 'note';
+// NEW IMPORTS FOR BOOK FEATURE
+import { BookView } from './components/BookView';
+import { BookProject, BookSession } from './types/book';
+import { bookService } from './services/bookService';
+
+type ActiveView = 'chat' | 'note' | 'book';
 
 function App() {
   const { selectedLanguage } = useContext(LanguageContext);
@@ -21,6 +26,7 @@ function App() {
   // --- START: Synchronous state initialization ---
   const [conversations, setConversations] = useState<Conversation[]>(() => storageUtils.getConversations());
   const [notes, setNotes] = useState<Note[]>(() => storageUtils.getNotes());
+  const [books, setBooks] = useState<BookProject[]>(() => storageUtils.getBooks());
   const [settings, setSettings] = useState<APISettings>(() => storageUtils.getSettings());
 
   const [activeView, setActiveView] = useState<ActiveView>('chat');
@@ -37,6 +43,7 @@ function App() {
     return null;
   });
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
+  const [currentBookId, setCurrentBookId] = useState<string | null>(null);
 
   const [sidebarFolded, setSidebarFolded] = useState(() => JSON.parse(localStorage.getItem('ai-tutor-sidebar-folded') || 'false'));
   // --- END: Synchronous state initialization ---
@@ -44,7 +51,7 @@ function App() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isQuizLoading, setIsQuizLoading] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Changed default to false
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const [studySession, setStudySession] = useState<StudySession | null>(null);
@@ -55,17 +62,13 @@ function App() {
   // --- START: Responsive sidebar handling ---
   useEffect(() => {
     const handleResize = () => {
-      // Only auto-open sidebar on desktop (lg and above)
       if (window.innerWidth >= 1024) {
         setSidebarOpen(true);
       } else {
         setSidebarOpen(false);
       }
     };
-    
-    // Set initial state
     handleResize();
-    
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -82,6 +85,17 @@ function App() {
   useEffect(() => {
     storageUtils.saveNotes(notes);
   }, [notes]);
+  
+  useEffect(() => {
+    storageUtils.saveBooks(books);
+  }, [books]);
+
+  useEffect(() => {
+    // Update book service with settings
+    const apiKey = settings.googleApiKey || settings.zhipuApiKey || settings.mistralApiKey;
+    bookService.updateSettings(apiKey, selectedLanguage);
+  }, [settings, selectedLanguage]);
+
 
   useEffect(() => {
     localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded));
@@ -101,7 +115,7 @@ function App() {
     setActiveView('chat');
     setCurrentConversationId(id);
     setCurrentNoteId(null);
-    // Close sidebar on mobile after selection
+    setCurrentBookId(null);
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
@@ -109,7 +123,15 @@ function App() {
     setActiveView('note');
     setCurrentNoteId(id);
     setCurrentConversationId(null);
-    // Close sidebar on mobile after selection
+    setCurrentBookId(null);
+    if (window.innerWidth < 1024) setSidebarOpen(false);
+  };
+
+  const handleSelectBook = (id: string) => {
+    setActiveView('book');
+    setCurrentBookId(id);
+    setCurrentConversationId(null);
+    setCurrentNoteId(null);
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
@@ -335,6 +357,56 @@ function App() {
     }
   };
 
+  const handleCreateBook = async (session: BookSession): Promise<void> => {
+    const tempBookId = generateId(); // Temporary ID for tracking
+    try {
+      const newBook: BookProject = {
+        id: tempBookId,
+        title: session.goal,
+        goal: session.goal,
+        language: session.language,
+        status: 'planning',
+        progress: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        modules: []
+      };
+
+      setBooks(prev => [newBook, ...prev]);
+      handleSelectBook(newBook.id);
+
+      const completedBook = await bookService.generateCompleteBook(session);
+      
+      setBooks(prev => prev.map(book => 
+        book.id === newBook.id ? { ...completedBook, id: newBook.id } : book
+      ));
+    } catch (error) {
+      setBooks(prev => prev.map(book => 
+        book.id === tempBookId
+          ? { 
+              ...book, 
+              status: 'error', 
+              error: error instanceof Error ? error.message : 'Unknown error',
+              updatedAt: new Date()
+            } 
+          : book
+      ));
+      throw error;
+    }
+  };
+
+  const handleDeleteBook = (id: string) => {
+    if (window.confirm(selectedLanguage === 'en' 
+      ? 'Are you sure you want to delete this book?' 
+      : 'तुम्हाला खात्री आहे की तुम्हाला हे पुस्तक हटवायचे आहे?')) {
+      setBooks(prev => prev.filter(b => b.id !== id));
+      if (currentBookId === id) {
+        setCurrentBookId(null);
+        setActiveView('chat');
+      }
+    }
+  };
+
   const handleRenameConversation = (id: string, newTitle: string) => setConversations(prev => prev.map(c => (c.id === id ? { ...c, title: newTitle, updatedAt: new Date() } : c)));
   const handleTogglePinConversation = (id: string) => setConversations(prev => prev.map(c => (c.id === id ? { ...c, isPinned: !c.isPinned, updatedAt: new Date() } : c)));
   const handleSaveSettings = (newSettings: APISettings) => { setSettings(newSettings); storageUtils.saveSettings(newSettings); setSettingsOpen(false); };
@@ -350,34 +422,30 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Mobile backdrop for sidebar */}
       {sidebarOpen && window.innerWidth < 1024 && (
         <div 
           className="sidebar-backdrop"
           onClick={() => setSidebarOpen(false)}
         />
       )}
-
-      {/* 
-        =====================================================================
-        THE FIX: The Sidebar component is now a direct child. The problematic
-        wrapper div has been removed. The Sidebar now controls its own layout.
-        =====================================================================
-      */}
       <Sidebar
         conversations={sortedConversations}
         notes={sortedNotes}
+        books={books}
         activeView={activeView}
         currentConversationId={currentConversationId}
         currentNoteId={currentNoteId}
+        currentBookId={currentBookId}
         onNewConversation={handleNewConversation}
         onNewPersonaConversation={handleNewPersonaConversation}
         onSelectConversation={handleSelectConversation}
         onSelectNote={handleSelectNote}
+        onSelectBook={handleSelectBook}
         onDeleteConversation={handleDeleteConversation}
         onRenameConversation={handleRenameConversation}
         onTogglePinConversation={handleTogglePinConversation}
         onDeleteNote={handleDeleteNote}
+        onDeleteBook={handleDeleteBook}
         onOpenSettings={() => setSettingsOpen(true)}
         settings={settings}
         onModelChange={handleModelChange}
@@ -387,9 +455,7 @@ function App() {
         isSidebarOpen={sidebarOpen}
       />
 
-      {/* Main Content Area */}
       <div className="main-content">
-        {/* Mobile menu button */}
         {!sidebarOpen && (
           <button 
             onClick={() => setSidebarOpen(true)} 
@@ -415,12 +481,20 @@ function App() {
             onEditMessage={handleEditMessage}
             onRegenerateResponse={handleRegenerateResponse}
           />
-        ) : (
+        ) : activeView === 'note' ? (
           <NoteView note={currentNote} />
+        ) : (
+          <BookView
+            books={books}
+            currentBookId={currentBookId}
+            onCreateBook={handleCreateBook}
+            onSelectBook={handleSelectBook}
+            onDeleteBook={handleDeleteBook}
+            hasApiKey={hasApiKey}
+          />
         )}
       </div>
 
-      {/* Modals */}
       <SettingsModal 
         isOpen={settingsOpen} 
         onClose={() => setSettingsOpen(false)} 
