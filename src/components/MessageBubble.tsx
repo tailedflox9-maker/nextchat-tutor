@@ -9,7 +9,6 @@ import { Message } from '../types';
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
-  model?: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral';
   onEditMessage?: (messageId: string, newContent: string) => void;
   onRegenerateResponse?: (messageId: string) => void;
   onSaveAsNote?: (content: string) => void;
@@ -26,7 +25,7 @@ const modelNames = {
 const CodeBlock = React.memo(({ language, children }: { language: string; children: string; }) => {
   const [copied, setCopied] = useState(false);
   const codeContent = String(children).replace(/\n$/, '');
-
+  
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(codeContent);
     setCopied(true);
@@ -131,7 +130,6 @@ const ActionButtons = React.memo(({ isUser, onRegenerate, onEdit, onCopy, onSave
 export function MessageBubble({
   message,
   isStreaming = false,
-  model,
   onEditMessage,
   onRegenerateResponse,
   onSaveAsNote,
@@ -145,10 +143,10 @@ export function MessageBubble({
   const copyTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Memoize display model to prevent unnecessary recalculations
-  const displayModel = useMemo(() =>
-    isUser ? undefined : modelNames[message.model || model || 'google'],
-    [isUser, message.model, model]
-  );
+  const displayModel = useMemo(() => {
+    if (isUser || !message.model) return undefined;
+    return modelNames[message.model] || modelNames['google'];
+  }, [isUser, message.model]);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -162,7 +160,7 @@ export function MessageBubble({
       console.error('Failed to copy text:', error);
     }
   }, [message.content]);
-
+  
   const handleSaveNote = useCallback(() => {
     if (onSaveAsNote) {
       onSaveAsNote(message.content);
@@ -281,14 +279,14 @@ export function MessageBubble({
           <Sparkles className="w-4 h-4 text-[var(--color-text-secondary)]" />
         </div>
       )}
-
+      
       <div className="message-bubble relative bg-[var(--color-card)] p-3 sm:p-4 rounded-xl min-h-[3rem] flex flex-col">
         {!isUser && displayModel && (
           <div className="text-xs text-[var(--color-text-secondary)] mb-2 font-medium tracking-wide">
             {displayModel}
           </div>
         )}
-
+        
         {isEditing ? (
           <div className="space-y-3">
             <textarea
@@ -321,36 +319,4 @@ export function MessageBubble({
             </p>
           </div>
         ) : (
-          <div className={`prose prose-invert prose-base max-w-none leading-relaxed flex-1 ${isUser ? 'font-semibold' : 'font-normal'}`}>
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={markdownComponents}
-            >
-              {message.content}
-            </ReactMarkdown>
-            {isStreaming && <StreamingIndicator />}
-          </div>
-        )}
-
-        {!isEditing && !isStreaming && message.content.length > 0 && onEditMessage && (
-          <ActionButtons
-            isUser={isUser}
-            onRegenerate={onRegenerateResponse ? handleRegenerate : undefined}
-            onEdit={handleEdit}
-            onCopy={handleCopy}
-            onSaveNote={handleSaveNote}
-            onExport={handleExport}
-            copied={copied}
-            noteSaved={noteSaved}
-          />
-        )}
-      </div>
-
-      {isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-card)]">
-          <Smile className="w-4 h-4 text-[var(--color-text-secondary)]" />
-        </div>
-      )}
-    </div>
-  );
-}
+          <div className={`prose prose-invert prose-base max-w-none leading-relaxed flex-1 ${isUser ?
