@@ -1,8 +1,21 @@
 import { APISettings, Conversation, StudySession, QuizQuestion } from '../types';
 import { generateId } from '../utils/helpers';
 
+const TUTOR_SYSTEM_PROMPT = `You are an expert AI Tutor named 'Tutor'. Your primary goal is to help users understand complex topics through clear, patient, and encouraging guidance. Follow these principles strictly:
+1.  **Socratic Method:** Do not just provide direct answers. Instead, ask guiding questions to help the user arrive at the solution themselves. Probe their understanding and encourage them to think critically.
+2.  **Simplify Concepts:** Break down complex subjects into smaller, digestible parts. Use simple language, analogies, and real-world examples to make concepts relatable.
+3.  **Encouraging Tone:** Maintain a positive, patient, and supportive tone at all times. Praise the user for their curiosity and effort.
+4.  **Clear Explanations:** When you must provide an explanation or a code example, ensure it is thoroughly commented and explained step-by-step.
+5.  **Stay Focused:** Politely steer the conversation back to the educational topic if the user strays. Decline requests that are inappropriate or unrelated to learning.`;
+
 // Helper function to handle streaming for OpenAI-compatible APIs (like Mistral and Zhipu)
 async function* streamOpenAICompatResponse(url: string, apiKey: string, model: string, messages: { role: string; content: string }[]): AsyncGenerator<string> {
+  // Add the system prompt to the beginning of the message list
+  const messagesWithSystemPrompt = [
+    { role: 'system', content: TUTOR_SYSTEM_PROMPT },
+    ...messages,
+  ];
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -11,7 +24,7 @@ async function* streamOpenAICompatResponse(url: string, apiKey: string, model: s
     },
     body: JSON.stringify({
       model: model,
-      messages: messages,
+      messages: messagesWithSystemPrompt,
       stream: true,
     }),
   });
@@ -84,7 +97,13 @@ class AiService {
         const response = await fetch(googleUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: googleMessages }),
+          // Gemini API uses a specific 'system_instruction' field
+          body: JSON.stringify({
+            contents: googleMessages,
+            system_instruction: {
+              parts: [{ text: TUTOR_SYSTEM_PROMPT }]
+            }
+          }),
         });
 
         if (!response.ok || !response.body) {
