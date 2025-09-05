@@ -2,12 +2,11 @@ import React, { useState, useContext, useEffect, ReactNode } from 'react';
 import { 
   Book, Plus, Download, Eye, Trash2, Clock, CheckCircle, 
   AlertCircle, Loader2, BookOpen, Target, Users, Brain,
-  FileText, Sparkles, Printer, BarChart3, ListChecks
+  FileText, Sparkles, BarChart3, ListChecks
 } from 'lucide-react';
 import { BookProject, BookSession, BookGenerationProgress } from '../types/book';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { bookService } from '../services/bookService';
-import { pdfService } from '../services/pdfService';
 import { bookEnhancementService, BookTemplate } from '../services/bookEnhancements';
 import { BookTemplateSelector } from './BookTemplateSelector';
 import { BookAnalytics } from './BookAnalytics';
@@ -46,7 +45,6 @@ export function BookView({
   const [creationStep, setCreationStep] = useState<'template' | 'form'>('template');
   const [detailTab, setDetailTab] = useState<'overview' | 'analytics'>('overview');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
   const [progress, setProgress] = useState<BookGenerationProgress | null>(null);
 
   const [formData, setFormData] = useState<BookSession>({
@@ -66,7 +64,6 @@ export function BookView({
   
   useEffect(() => {
     setFormData(prev => ({ ...prev, language: selectedLanguage }));
-    pdfService.setLanguage(selectedLanguage);
   }, [selectedLanguage]);
   
   const handleSelectTemplate = (template: BookTemplate) => {
@@ -95,19 +92,6 @@ export function BookView({
     } finally {
       setIsGenerating(false);
       setProgress(null);
-    }
-  };
-
-  const handleExportPDF = async (book: BookProject) => {
-    if (isPdfGenerating) return;
-    setIsPdfGenerating(true);
-    try {
-      await pdfService.generatePDF(book);
-    } catch (error) {
-      console.error('Failed to generate PDF:', error);
-      alert('Error generating PDF.');
-    } finally {
-      setIsPdfGenerating(false);
     }
   };
 
@@ -456,14 +440,6 @@ export function BookView({
                   title="Download as Markdown"
                 >
                   <Download className="w-4 h-4" />.md
-                </button>
-                <button
-                  onClick={() => handleExportPDF(currentBook)}
-                  disabled={isPdfGenerating}
-                  className="flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] text-[var(--color-accent-text)] text-sm font-semibold rounded-lg transition-colors disabled:opacity-60"
-                >
-                  {isPdfGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-                  <span>{isPdfGenerating ? (selectedLanguage === 'en' ? 'Exporting...' : 'निर्यात करत आहे...') : (selectedLanguage === 'en' ? 'Export PDF' : 'PDF निर्यात करा')}</span>
                 </button>
               </div>
             )}
