@@ -286,7 +286,7 @@ function App() {
     if (currentConversationId === id) {
       const newId = remaining.length > 0 ? sortedConversations.filter(c => c.id !== id)[0]?.id : null;
       setCurrentConversationId(newId);
-      if (!newId) setActiveView('chat'); // Go to default view if no chats left
+      if (!newId) setActiveView('chat');
     }
   };
   
@@ -304,6 +304,7 @@ function App() {
     setNotes(prev => [newNote, ...prev]);
     alert("Note saved!");
   };
+
   const handleDeleteNote = (id: string) => {
     setNotes(prev => prev.filter(n => n.id !== id));
     if(currentNoteId === id) {
@@ -311,6 +312,7 @@ function App() {
       setActiveView('chat');
     }
   };
+
   const handleGenerateQuiz = async () => {
     const conversation = conversations.find(c => c.id === currentConversationId);
     if (!conversation) return;
@@ -354,7 +356,6 @@ function App() {
       await bookService.generateRoadmap(session, newBook.id);
     } catch (error) {
       console.error("Roadmap generation failed:", error);
-      // State is already updated to 'error' by the progress callback
     }
   };
   
@@ -393,7 +394,7 @@ function App() {
             status: 'error', 
             error: `Failed on module: ${roadmapModule.title}. You can retry.` 
         });
-        return; // Stop generation on first error
+        return;
       }
     }
   };
