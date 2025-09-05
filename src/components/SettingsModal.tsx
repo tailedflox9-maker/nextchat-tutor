@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
-import { X, Settings, Key, Download, Upload, Languages, Shield, Database, Eye, EyeOff, HelpCircle, Trash2 } from 'lucide-react';
+import { X, Settings, Key, Download, Upload, Shield, Database, Eye, EyeOff, HelpCircle, Trash2 } from 'lucide-react';
 import { APISettings } from '../types';
 import { storageUtils } from '../utils/storage';
-import { LanguageContext } from '../contexts/LanguageContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   settings: APISettings;
   onSaveSettings: (settings: APISettings) => void;
-  isSidebarFolded: boolean;
-  isSidebarOpen: boolean;
 }
 
 const apiInfo = {
@@ -19,23 +16,17 @@ const apiInfo = {
   mistral: { name: 'Mistral', url: 'https://console.mistral.ai/api-keys' },
 };
 
-type ActiveTab = 'general' | 'keys' | 'data';
+type ActiveTab = 'keys' | 'data';
 
 export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: SettingsModalProps) {
-  const { selectedLanguage, setSelectedLanguage } = React.useContext(LanguageContext);
   const [localSettings, setLocalSettings] = useState<APISettings>(settings);
   const [visibleApis, setVisibleApis] = useState<Record<string, boolean>>({});
-  const [activeTab, setActiveTab] = useState<ActiveTab>('general');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('keys');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     setLocalSettings(settings);
   }, [settings]);
-
-  const handleLanguageChange = (language: 'en' | 'mr') => {
-    setSelectedLanguage(language);
-    localStorage.setItem('ai-tutor-language', language);
-  };
 
   const toggleApiVisibility = (id: string) => {
     setVisibleApis(prev => ({ ...prev, [id]: !prev[id] }));
@@ -47,10 +38,11 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
 
   const handleExportData = () => {
     const conversations = storageUtils.getConversations();
+    const notes = storageUtils.getNotes();
     const data = {
       conversations,
+      notes,
       settings: storageUtils.getSettings(),
-      language: selectedLanguage,
       exportDate: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -70,19 +62,16 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
       try {
         const data = JSON.parse(e.target?.result as string);
         if (data.conversations) storageUtils.saveConversations(data.conversations);
+        if (data.notes) storageUtils.saveNotes(data.notes);
         if (data.settings) {
           setLocalSettings(data.settings);
           storageUtils.saveSettings(data.settings);
         }
-        if (data.language) {
-          setSelectedLanguage(data.language);
-          localStorage.setItem('ai-tutor-language', data.language);
-        }
-        alert(selectedLanguage === 'en' ? 'Data imported successfully! The app will now reload.' : 'डेटा यशस्वीपणे आयात केला! ॲप आता रीलोड होईल.');
+        alert('Data imported successfully! The app will now reload.');
         window.location.reload();
       } catch (error) {
         console.error('Error importing data:', error);
-        alert(selectedLanguage === 'en' ? 'Failed to import data.' : 'डेटा आयात अयशस्वी.');
+        alert('Failed to import data.');
       }
     };
     reader.readAsText(file);
@@ -94,13 +83,9 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
   };
 
   const handleClearData = () => {
-    const confirmationText = selectedLanguage === 'en'
-      ? 'Are you sure you want to delete all conversations and settings? This action cannot be undone.'
-      : 'तुम्हाला खात्री आहे की तुम्हाला सर्व संभाषणे आणि सेटिंग्ज हटवायची आहेत? ही क्रिया पूर्ववत केली जाऊ शकत नाही.';
-      
-    if (window.confirm(confirmationText)) {
+    if (window.confirm('Are you sure you want to delete all conversations and settings? This action cannot be undone.')) {
       storageUtils.clearAllData();
-      alert(selectedLanguage === 'en' ? 'All data has been cleared. The app will now reload.' : 'सर्व डेटा साफ झाला आहे. ॲप आता रीलोड होईल.');
+      alert('All data has been cleared. The app will now reload.');
       window.location.reload();
     }
   };
@@ -130,7 +115,7 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
         <div className="p-6 flex items-center justify-between border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
             <Settings className="w-5 h-5" />
-            <h2 className="text-xl font-bold">{selectedLanguage === 'en' ? 'Settings' : 'सेटिंग्ज'}</h2>
+            <h2 className="text-xl font-bold">Settings</h2>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-card)] transition-colors">
             <X className="w-5 h-5" />
@@ -138,26 +123,13 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
         </div>
 
         {/* Tabs */}
-        <div className="p-3 grid grid-cols-3 gap-2 border-b border-[var(--color-border)]">
-          <TabButton id="general" label={selectedLanguage === 'en' ? 'General' : 'सामान्य'} Icon={Languages} />
-          <TabButton id="keys" label={selectedLanguage === 'en' ? 'API Keys' : 'API की'} Icon={Shield} />
-          <TabButton id="data" label={selectedLanguage === 'en' ? 'Data' : 'डेटा'} Icon={Database} />
+        <div className="p-3 grid grid-cols-2 gap-2 border-b border-[var(--color-border)]">
+          <TabButton id="keys" label="API Keys" Icon={Shield} />
+          <TabButton id="data" label="Data" Icon={Database} />
         </div>
-        
+
         {/* Content */}
         <div className="p-6 min-h-[20rem]">
-          {activeTab === 'general' && (
-            <div className="space-y-4 animate-fadeIn">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                {selectedLanguage === 'en' ? 'Language' : 'भाषा'}
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => handleLanguageChange('en')} className={`p-3 border rounded-lg transition-colors text-sm font-semibold ${selectedLanguage === 'en' ? 'bg-[var(--color-card)] border-[var(--color-border)]' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)]'}`}>English</button>
-                <button onClick={() => handleLanguageChange('mr')} className={`p-3 border rounded-lg transition-colors text-sm font-semibold ${selectedLanguage === 'mr' ? 'bg-[var(--color-card)] border-[var(--color-border)]' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)]'}`}>मराठी</button>
-              </div>
-            </div>
-          )}
-
           {activeTab === 'keys' && (
             <div className="space-y-4 animate-fadeIn">
               {Object.keys(apiInfo).map(key => {
@@ -194,18 +166,18 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
           {activeTab === 'data' && (
             <div className="space-y-6 animate-fadeIn">
               <div>
-                <h3 className="font-semibold mb-2">{selectedLanguage === 'en' ? 'Import / Export' : 'आयात / निर्यात'}</h3>
+                <h3 className="font-semibold mb-2">Import / Export</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={handleExportData} className="flex items-center justify-center gap-2 p-3 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-card)] transition-colors"> <Download className="w-4 h-4"/> {selectedLanguage === 'en' ? 'Export' : 'निर्यात'}</button>
-                  <button onClick={triggerFileInput} className="flex items-center justify-center gap-2 p-3 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-card)] transition-colors"> <Upload className="w-4 h-4"/> {selectedLanguage === 'en' ? 'Import' : 'आयात'}</button>
+                  <button onClick={handleExportData} className="flex items-center justify-center gap-2 p-3 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-card)] transition-colors"> <Download className="w-4 h-4"/> Export</button>
+                  <button onClick={triggerFileInput} className="flex items-center justify-center gap-2 p-3 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-card)] transition-colors"> <Upload className="w-4 h-4"/> Import</button>
                   <input type="file" ref={fileInputRef} onChange={handleImportData} accept=".json" className="hidden"/>
                 </div>
               </div>
-               <div>
-                <h3 className="font-semibold mb-2 text-red-400">{selectedLanguage === 'en' ? 'Danger Zone' : 'धोका क्षेत्र'}</h3>
+              <div>
+                <h3 className="font-semibold mb-2 text-red-400">Danger Zone</h3>
                 <button onClick={handleClearData} className="w-full flex items-center justify-center gap-2 p-3 border border-red-500/30 bg-red-900/20 text-red-400 rounded-lg hover:bg-red-900/40 hover:text-red-300 transition-colors">
                   <Trash2 className="w-4 h-4" />
-                  {selectedLanguage === 'en' ? 'Clear All Data' : 'सर्व डेटा साफ करा'}
+                  Clear All Data
                 </button>
               </div>
             </div>
@@ -215,10 +187,10 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
         {/* Footer */}
         <div className="flex justify-end gap-3 p-4 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
           <button onClick={onClose} className="px-6 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors font-semibold">
-            {selectedLanguage === 'en' ? 'Cancel' : 'रद्द करा'}
+            Cancel
           </button>
           <button onClick={handleSave} className="px-6 py-2 bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] rounded-lg hover:bg-[var(--color-accent-bg-hover)] transition-colors font-semibold">
-            {selectedLanguage === 'en' ? 'Save' : 'जतन करा'}
+            Save
           </button>
         </div>
       </div>
