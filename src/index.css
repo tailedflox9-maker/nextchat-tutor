@@ -1,10 +1,7 @@
 /* ==========================================================================
    FILE: src/index.css - FIXED RESPONSIVE VERSION
    ========================================================================== */
-
-@import url('https://fonts.googleapis.com/css2?family=Palanquin+Dark:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -17,7 +14,7 @@
     background-color: #3B82F6;
     color: #FFFFFF;
   }
-  
+
   :root {
     --color-bg: #0A0A0A;
     --color-sidebar: #141414;
@@ -30,115 +27,27 @@
     --color-accent-text: #0A0A0A;
     --color-accent-bg-hover: #F0F0F0;
     --font-weight: 500;
-    --font-marathi: 'Palanquin Dark', sans-serif;
     --font-english: 'Inter', sans-serif;
   }
-  
+
   * {
     box-sizing: border-box;
   }
-  
+
   html, body {
     height: 100%;
     overflow-x: hidden;
   }
-  
+
   body {
     @apply bg-[var(--color-bg)] text-[var(--color-text-primary)] font-sans font-[var(--font-weight)];
     font-family: var(--font-english);
     margin: 0;
     padding: 0;
   }
-  
+
   html {
     scroll-behavior: smooth;
-  }
-
-  /* --- Marathi Font Styling --- */
-  body[data-lang="mr"],
-  .marathi-text,
-  [lang="mr"] {
-    font-family: var(--font-marathi) !important;
-    font-weight: 600 !important;
-    /* REMOVED font-size: 1.15em !important; to fix zoom issue */
-    line-height: 1.7 !important;
-    letter-spacing: 0.01em !important;
-    text-rendering: optimizeLegibility;
-    -webkit-font-feature-settings: "liga" 1, "calt" 1, "kern" 1, "dlig" 1;
-    font-feature-settings: "liga" 1, "calt" 1, "kern" 1, "dlig" 1;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  .marathi-text.font-medium,
-  [lang="mr"].font-medium,
-  body[data-lang="mr"] .font-medium {
-    font-weight: 700 !important;
-  }
-  .marathi-text.font-semibold,
-  [lang="mr"].font-semibold,
-  body[data-lang="mr"] .font-semibold {
-    font-weight: 800 !important;
-  }
-  .marathi-text.font-bold,
-  [lang="mr"].font-bold,
-  body[data-lang="mr"] .font-bold {
-    font-weight: 900 !important;
-  }
-
-  body[data-lang="mr"] button,
-  body[data-lang="mr"] .btn,
-  [lang="mr"] button,
-  [lang="mr"] .btn {
-    font-family: var(--font-marathi) !important;
-    font-weight: 700 !important;
-    text-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
-  }
-
-  body[data-lang="mr"] h1,
-  body[data-lang="mr"] h2,
-  body[data-lang="mr"] h3,
-  body[data-lang="mr"] h4,
-  body[data-lang="mr"] h5,
-  body[data-lang="mr"] h6,
-  [lang="mr"] h1,
-  [lang="mr"] h2,
-  [lang="mr"] h3,
-  [lang="mr"] h4,
-  [lang="mr"] h5,
-  [lang="mr"] h6 {
-    font-family: var(--font-marathi) !important;
-    font-weight: 800 !important;
-    line-height: 1.5 !important;
-    text-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
-  }
-
-  body[data-lang="mr"] input,
-  body[data-lang="mr"] textarea,
-  body[data-lang="mr"] select,
-  [lang="mr"] input,
-  [lang="mr"] textarea,
-  [lang="mr"] select {
-    font-family: var(--font-marathi) !important;
-    font-weight: 600 !important;
-    font-size: 1.05em !important;
-  }
-
-  body[data-lang="mr"] input::placeholder,
-  body[data-lang="mr"] textarea::placeholder,
-  [lang="mr"] input::placeholder,
-  [lang="mr"] textarea::placeholder {
-    font-family: var(--font-marathi) !important;
-    font-weight: 600 !important;
-    opacity: 0.7;
-  }
-
-  body[data-lang="mr"] .sidebar button,
-  body[data-lang="mr"] .sidebar .font-semibold,
-  [lang="mr"] .sidebar button,
-  [lang="mr"] .sidebar .font-semibold {
-    font-weight: 800 !important;
-    text-shadow: 0 0 1px rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -232,7 +141,7 @@
     position: relative;
     z-index: 20;
   }
-  
+
   /* Desktop sidebar */
   @media (min-width: 1024px) {
     .sidebar {
@@ -243,37 +152,35 @@
       width: 4rem; /* 16 * 4px = 64px */
     }
   }
-  
-  /* Mobile sidebar */
-/* Mobile Sidebar */
-@media (max-width: 1023px) {
-  .sidebar {
-    position: fixed;
-    width: 280px;
-    left: 0;
-    top: 0;
-    z-index: 50;
-    transform: translateX(-100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-  }
-  .sidebar.sidebar-open {
-    transform: translateX(0);
-  }
-  .sidebar-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    z-index: 40;
-  }
-  .mobile-menu-button {
-    position: fixed;
-    top: 1rem;
-    left: 1rem;
-    z-index: 60;
-  }
-}
 
+  /* Mobile Sidebar */
+  @media (max-width: 1023px) {
+    .sidebar {
+      position: fixed;
+      width: 280px;
+      left: 0;
+      top: 0;
+      z-index: 50;
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+    .sidebar.sidebar-open {
+      transform: translateX(0);
+    }
+    .sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 40;
+    }
+    .mobile-menu-button {
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      z-index: 60;
+    }
+  }
 
   /* --- MAIN CONTENT AREA FIXES --- */
   .main-content {
@@ -283,7 +190,7 @@
     min-width: 0; /* Prevents flex item from overflowing */
     position: relative;
   }
-  
+
   @media (max-width: 1023px) {
     .main-content {
       width: 100%;
@@ -321,7 +228,7 @@
     animation: messageSlideIn 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
     will-change: transform, opacity;
   }
-  
+
   .message-bubble {
     transition: all 0.2s ease-out;
     transform: translateZ(0);
@@ -407,6 +314,7 @@
     border-radius: 50%;
     animation: typing 1.4s infinite ease-in-out;
   }
+
   .typing-dot:nth-child(1) { animation-delay: -0.32s; }
   .typing-dot:nth-child(2) { animation-delay: -0.16s; }
 
@@ -430,22 +338,25 @@
     transform: translateY(-2px) translateZ(0);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
+
   .interactive-button:active {
     transform: translateY(0) translateZ(0);
     transition-duration: 0.1s;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   }
+
   .interactive-button:disabled {
     transform: none !important;
     box-shadow: none !important;
     opacity: 0.5;
     cursor: not-allowed;
   }
+
   .interactive-button:focus-visible {
     outline: 2px solid var(--color-accent-bg);
     outline-offset: 2px;
   }
-  
+
   /* Chat UI Specific Button */
   .chat-ui-button {
     background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
@@ -454,15 +365,18 @@
     transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
     box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
   }
+
   .chat-ui-button:hover {
     background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     transform: translateY(-1px);
   }
+
   .chat-ui-button:active {
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
   }
+
   .chat-ui-button:disabled {
     background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
     cursor: not-allowed;
@@ -543,8 +457,8 @@
 
   /* --- SAFE AREA FOR PWA --- */
   @media (display-mode: standalone) {
-    body { 
-      user-select: none; 
+    body {
+      user-select: none;
     }
     .pwa-safe-area {
       padding-top: env(safe-area-inset-top);
@@ -555,14 +469,14 @@
   }
 
   @media (max-width: 1023px) and (display-mode: standalone) {
-    .sidebar { 
-      padding-top: env(safe-area-inset-top); 
+    .sidebar {
+      padding-top: env(safe-area-inset-top);
     }
-    .mobile-chat-area { 
-      padding-bottom: calc(env(safe-area-inset-bottom) + 1rem); 
+    .mobile-chat-area {
+      padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
     }
   }
-  
+
   /* --- ACCESSIBILITY --- */
   .sr-only {
     position: absolute;
@@ -594,21 +508,15 @@
 
   /* --- ADDITIONAL MOBILE OPTIMIZATIONS --- */
   @media (max-width: 768px) {
-    .touch-target { 
-      min-height: 44px; 
-      min-width: 44px; 
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
     }
-    .scroll-container { 
-      -webkit-overflow-scrolling: touch; 
+    .scroll-container {
+      -webkit-overflow-scrolling: touch;
     }
-    input, textarea, select { 
-      font-size: 16px; 
-    }
-    body[data-lang="mr"] input,
-    body[data-lang="mr"] textarea,
-    [lang="mr"] input,
-    [lang="mr"] textarea { 
-      font-size: 16px !important; 
+    input, textarea, select {
+      font-size: 16px;
     }
 
     /* Fix for mobile viewport units */
