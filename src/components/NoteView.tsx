@@ -1,10 +1,9 @@
-import React, { useMemo, useContext } from 'react';
+import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Note } from '../types';
-import { LanguageContext } from '../contexts/LanguageContext';
 import { formatDate } from '../utils/helpers';
 
 interface NoteViewProps {
@@ -14,10 +13,10 @@ interface NoteViewProps {
 const CodeBlock = React.memo(({ language, children }: { language: string; children: string; }) => {
   const codeContent = String(children).replace(/\n$/, '');
   return (
-    <SyntaxHighlighter 
-      style={vscDarkPlus} 
-      language={language} 
-      PreTag="div" 
+    <SyntaxHighlighter
+      style={vscDarkPlus}
+      language={language}
+      PreTag="div"
       className="!bg-[#121212] rounded-md !p-4"
     >
       {codeContent}
@@ -26,8 +25,6 @@ const CodeBlock = React.memo(({ language, children }: { language: string; childr
 });
 
 export function NoteView({ note }: NoteViewProps) {
-  const { selectedLanguage } = useContext(LanguageContext);
-  
   const markdownComponents = useMemo(() => ({
     code({ node, inline, className, children, ...props }: any) {
       const match = /language-(\w+)/.exec(className || '');
@@ -64,18 +61,16 @@ export function NoteView({ note }: NoteViewProps) {
     return (
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="text-center max-w-md w-full px-4">
-          <img 
-            src="/white-logo.png" 
-            alt="AI Tutor Logo" 
-            className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 opacity-50" 
+          <img
+            src="/white-logo.png"
+            alt="AI Tutor Logo"
+            className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 opacity-50"
           />
           <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)] mb-2">
-            {selectedLanguage === 'en' ? 'Select a note to view' : 'पाहण्यासाठी एक नोट निवडा'}
+            Select a note to view
           </h2>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            {selectedLanguage === 'en' 
-              ? 'Choose a note from the sidebar to get started'
-              : 'सुरुवात करण्यासाठी साइडबारमधून एक नोट निवडा'}
+            Choose a note from the sidebar to get started
           </p>
         </div>
       </div>
@@ -91,16 +86,16 @@ export function NoteView({ note }: NoteViewProps) {
           </h1>
           <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--color-text-secondary)]">
             <span>
-              {selectedLanguage === 'en' ? 'Saved on:' : 'जतन केले:'} {formatDate(note.createdAt)}
+              Saved on: {formatDate(note.createdAt)}
             </span>
             {note.sourceConversationId && (
               <span className="px-2 py-1 bg-[var(--color-card)] rounded-full text-xs">
-                {selectedLanguage === 'en' ? 'From Chat' : 'चॅट वरून'}
+                From Chat
               </span>
             )}
           </div>
         </div>
-        
+
         <article className="prose prose-invert prose-base sm:prose-lg max-w-none leading-relaxed">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {note.content}
