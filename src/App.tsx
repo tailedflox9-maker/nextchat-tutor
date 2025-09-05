@@ -13,7 +13,7 @@ import { LanguageContext } from './contexts/LanguageContext';
 import { storageUtils } from './utils/storage';
 import { aiService } from './services/aiService';
 
-// NEW IMPORTS FOR BOOK FEATURE
+// BOOK FEATURE IMPORTS
 import { BookView } from './components/BookView';
 import { BookProject, BookSession } from './types/book';
 import { bookService } from './services/bookService';
@@ -23,31 +23,17 @@ type ActiveView = 'chat' | 'note' | 'book';
 function App() {
   const { selectedLanguage } = useContext(LanguageContext);
 
-  // --- START: Synchronous state initialization ---
+  // --- STATE INITIALIZATION ---
   const [conversations, setConversations] = useState<Conversation[]>(() => storageUtils.getConversations());
   const [notes, setNotes] = useState<Note[]>(() => storageUtils.getNotes());
   const [books, setBooks] = useState<BookProject[]>(() => storageUtils.getBooks());
   const [settings, setSettings] = useState<APISettings>(() => storageUtils.getSettings());
-
   const [activeView, setActiveView] = useState<ActiveView>('chat');
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(() => {
-    const initialConversations = storageUtils.getConversations();
-    if (initialConversations.length > 0) {
-      const sorted = [...initialConversations].sort((a, b) => {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-      });
-      return sorted[0].id;
-    }
-    return null;
-  });
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
   const [currentBookId, setCurrentBookId] = useState<string | null>(null);
-
   const [sidebarFolded, setSidebarFolded] = useState(() => JSON.parse(localStorage.getItem('ai-tutor-sidebar-folded') || 'false'));
-  // --- END: Synchronous state initialization ---
-
+  
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isQuizLoading, setIsQuizLoading] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
@@ -58,8 +44,20 @@ function App() {
   const stopStreamingRef = useRef(false);
 
   const { isInstallable, isInstalled, installApp, dismissInstallPrompt } = usePWA();
+  
+  // --- EFFECTS ---
+  useEffect(() => {
+    const initialConversations = storageUtils.getConversations();
+    if (initialConversations.length > 0) {
+      const sorted = [...initialConversations].sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      });
+      setCurrentConversationId(sorted[0].id);
+    }
+  }, []);
 
-  // --- START: Responsive sidebar handling ---
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
@@ -72,45 +70,24 @@ function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  // --- END: Responsive sidebar handling ---
 
   useEffect(() => {
-    aiService.updateSettings(settings, selectedLanguage);
-  }, [settings, selectedLanguage]);
-
-  useEffect(() => {
-    storageUtils.saveConversations(conversations);
-  }, [conversations]);
-  
-  useEffect(() => {
-    storageUtils.saveNotes(notes);
-  }, [notes]);
-  
-  useEffect(() => {
-    storageUtils.saveBooks(books);
-  }, [books]);
-
-  useEffect(() => {
-    // Update book service with settings
     const apiKey = settings.googleApiKey || settings.zhipuApiKey || settings.mistralApiKey;
+    aiService.updateSettings(settings, selectedLanguage);
     bookService.updateSettings(apiKey, selectedLanguage);
   }, [settings, selectedLanguage]);
 
+  useEffect(() => { storageUtils.saveConversations(conversations); }, [conversations]);
+  useEffect(() => { storageUtils.saveNotes(notes); }, [notes]);
+  useEffect(() => { storageUtils.saveBooks(books); }, [books]);
+  useEffect(() => { localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded)); }, [sidebarFolded]);
 
-  useEffect(() => {
-    localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded));
-  }, [sidebarFolded]);
-
-  const handleModelChange = (model: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral') => {
-    const newSettings = { ...settings, selectedModel: model };
-    setSettings(newSettings);
-    storageUtils.saveSettings(newSettings);
-  };
-
+  // --- MEMOS ---
   const currentConversation = useMemo(() => conversations.find(c => c.id === currentConversationId), [conversations, currentConversationId]);
   const currentNote = useMemo(() => notes.find(n => n.id === currentNoteId), [notes, currentNoteId]);
   const hasApiKey = !!(settings.googleApiKey || settings.zhipuApiKey || settings.mistralApiKey);
-
+  
+  // --- GENERAL HANDLERS ---
   const handleSelectConversation = (id: string) => {
     setActiveView('chat');
     setCurrentConversationId(id);
@@ -118,16 +95,14 @@ function App() {
     setCurrentBookId(null);
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
-
-  const handleSelectNote = (id: string | null) => { // CHANGED: Now accepts null
+  const handleSelectNote = (id: string | null) => {
     setActiveView('note');
     setCurrentNoteId(id);
     setCurrentConversationId(null);
     setCurrentBookId(null);
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
-
-  const handleSelectBook = (id: string | null) => { // CHANGED: Now accepts null
+  const handleSelectBook = (id: string | null) => {
     setActiveView('book');
     setCurrentBookId(id);
     setCurrentConversationId(null);
@@ -135,6 +110,7 @@ function App() {
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
+  // --- CHAT HANDLERS ---
   const handleNewConversation = () => {
     const newConversation: Conversation = {
       id: generateId(), 
@@ -159,46 +135,6 @@ function App() {
     };
     setConversations(prev => [newConversation, ...prev]);
     handleSelectConversation(newConversation.id);
-  };
-
-  const handleSaveAsNote = (content: string) => {
-    if (!currentConversationId) return;
-    const newNote: Note = {
-      id: generateId(), 
-      title: generateConversationTitle(content), 
-      content, 
-      createdAt: new Date(), 
-      updatedAt: new Date(), 
-      sourceConversationId: currentConversationId,
-    };
-    setNotes(prev => [newNote, ...prev]);
-    alert("Note saved!");
-  };
-
-  const handleDeleteNote = (id: string) => {
-    setNotes(prev => prev.filter(n => n.id !== id));
-    if(currentNoteId === id) {
-      setCurrentNoteId(null);
-      setActiveView('chat');
-    }
-  };
-  
-  const handleGenerateQuiz = async () => {
-    const conversation = conversations.find(c => c.id === currentConversationId);
-    if (!conversation) return;
-
-    setIsQuizLoading(true);
-    try {
-      const session = await aiService.generateQuiz(conversation);
-      
-      setStudySession(session);
-      setIsQuizModalOpen(true);
-    } catch (error) {
-      console.error(error);
-      alert(error instanceof Error ? error.message : 'Failed to generate quiz.');
-    } finally {
-      setIsQuizLoading(false);
-    }
   };
 
   const handleSendMessage = async (content: string) => {
@@ -345,53 +281,129 @@ function App() {
   };
   
   const handleDeleteConversation = (id: string) => {
-    setConversations(prev => prev.filter(c => c.id !== id));
+    const remaining = conversations.filter(c => c.id !== id);
+    setConversations(remaining);
     if (currentConversationId === id) {
-      const remaining = sortedConversations.filter(c => c.id !== id);
-      const newId = remaining.length > 0 ? remaining[0].id : null;
-      if (newId) {
-        handleSelectConversation(newId)
-      } else {
-        setCurrentConversationId(null);
+      const newId = remaining.length > 0 ? sortedConversations.filter(c => c.id !== id)[0]?.id : null;
+      setCurrentConversationId(newId);
+      if (!newId) setActiveView('chat'); // Go to default view if no chats left
+    }
+  };
+  
+  // --- NOTE & QUIZ HANDLERS ---
+  const handleSaveAsNote = (content: string) => {
+    if (!currentConversationId) return;
+    const newNote: Note = {
+      id: generateId(), 
+      title: generateConversationTitle(content), 
+      content, 
+      createdAt: new Date(), 
+      updatedAt: new Date(), 
+      sourceConversationId: currentConversationId,
+    };
+    setNotes(prev => [newNote, ...prev]);
+    alert("Note saved!");
+  };
+  const handleDeleteNote = (id: string) => {
+    setNotes(prev => prev.filter(n => n.id !== id));
+    if(currentNoteId === id) {
+      setCurrentNoteId(null);
+      setActiveView('chat');
+    }
+  };
+  const handleGenerateQuiz = async () => {
+    const conversation = conversations.find(c => c.id === currentConversationId);
+    if (!conversation) return;
+
+    setIsQuizLoading(true);
+    try {
+      const session = await aiService.generateQuiz(conversation);
+      setStudySession(session);
+      setIsQuizModalOpen(true);
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : 'Failed to generate quiz.');
+    } finally {
+      setIsQuizLoading(false);
+    }
+  };
+  
+  // --- BOOK HANDLERS (REFACTORED) ---
+  const handleBookProgressUpdate = (bookId: string, updates: Partial<BookProject>) => {
+    setBooks(prev => prev.map(book => book.id === bookId ? { ...book, ...updates, updatedAt: new Date() } : book));
+  };
+  
+  const handleCreateBookRoadmap = async (session: BookSession): Promise<void> => {
+    const newBook: BookProject = {
+      id: generateId(),
+      title: session.goal,
+      goal: session.goal,
+      language: session.language,
+      status: 'planning',
+      progress: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      modules: []
+    };
+    
+    setBooks(prev => [newBook, ...prev]);
+    handleSelectBook(newBook.id);
+    bookService.setProgressCallback(handleBookProgressUpdate);
+
+    try {
+      await bookService.generateRoadmap(session, newBook.id);
+    } catch (error) {
+      console.error("Roadmap generation failed:", error);
+      // State is already updated to 'error' by the progress callback
+    }
+  };
+  
+  const handleGenerateAllModules = async (book: BookProject, session: BookSession): Promise<void> => {
+    if (!book.roadmap) return;
+    handleBookProgressUpdate(book.id, { status: 'generating_content' });
+    
+    const modulesToGenerate = book.roadmap.modules.filter(roadmapModule => 
+      !book.modules.find(m => m.roadmapModuleId === roadmapModule.id && m.status === 'completed')
+    );
+
+    let completedModules = [...book.modules];
+    const totalModules = book.roadmap.modules.length;
+    const initialProgress = 10;
+    const generationProgress = 80;
+
+    for (const roadmapModule of modulesToGenerate) {
+      try {
+        const newModule = await bookService.generateModuleContent(
+          { ...book, modules: completedModules },
+          roadmapModule,
+          session
+        );
+        completedModules.push(newModule);
+        
+        const currentProgress = initialProgress + (completedModules.length / totalModules) * generationProgress;
+        
+        handleBookProgressUpdate(book.id, { 
+          modules: [...completedModules],
+          progress: currentProgress,
+        });
+
+      } catch (error) {
+        console.error(`Failed to generate module ${roadmapModule.title}`, error);
+        handleBookProgressUpdate(book.id, { 
+            status: 'error', 
+            error: `Failed on module: ${roadmapModule.title}. You can retry.` 
+        });
+        return; // Stop generation on first error
       }
     }
   };
 
-  const handleCreateBook = async (session: BookSession): Promise<void> => {
-    const tempBookId = generateId(); // Temporary ID for tracking
+  const handleAssembleBook = async (book: BookProject, session: BookSession): Promise<void> => {
     try {
-      const newBook: BookProject = {
-        id: tempBookId,
-        title: session.goal,
-        goal: session.goal,
-        language: session.language,
-        status: 'planning',
-        progress: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        modules: []
-      };
-
-      setBooks(prev => [newBook, ...prev]);
-      handleSelectBook(newBook.id);
-
-      const completedBook = await bookService.generateCompleteBook(session);
-      
-      setBooks(prev => prev.map(book => 
-        book.id === newBook.id ? { ...completedBook, id: newBook.id } : book
-      ));
+      await bookService.assembleFinalBook(book, session);
     } catch (error) {
-      setBooks(prev => prev.map(book => 
-        book.id === tempBookId
-          ? { 
-              ...book, 
-              status: 'error', 
-              error: error instanceof Error ? error.message : 'Unknown error',
-              updatedAt: new Date()
-            } 
-          : book
-      ));
-      throw error;
+      console.error("Failed to assemble book:", error);
+      handleBookProgressUpdate(book.id, { status: 'error', error: 'Final assembly failed.' });
     }
   };
 
@@ -406,7 +418,13 @@ function App() {
       }
     }
   };
-
+  
+  // --- OTHER HANDLERS ---
+  const handleModelChange = (model: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral') => {
+    const newSettings = { ...settings, selectedModel: model };
+    setSettings(newSettings);
+    storageUtils.saveSettings(newSettings);
+  };
   const handleRenameConversation = (id: string, newTitle: string) => setConversations(prev => prev.map(c => (c.id === id ? { ...c, title: newTitle, updatedAt: new Date() } : c)));
   const handleTogglePinConversation = (id: string) => setConversations(prev => prev.map(c => (c.id === id ? { ...c, isPinned: !c.isPinned, updatedAt: new Date() } : c)));
   const handleSaveSettings = (newSettings: APISettings) => { setSettings(newSettings); storageUtils.saveSettings(newSettings); setSettingsOpen(false); };
@@ -423,10 +441,7 @@ function App() {
   return (
     <div className="app-container">
       {sidebarOpen && window.innerWidth < 1024 && (
-        <div 
-          className="sidebar-backdrop"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
       )}
       <Sidebar
         conversations={sortedConversations}
@@ -454,7 +469,6 @@ function App() {
         onToggleFold={() => setSidebarFolded(!sidebarFolded)}
         isSidebarOpen={sidebarOpen}
       />
-
       <div className="main-content">
         {!sidebarOpen && (
           <button 
@@ -466,7 +480,6 @@ function App() {
             <Menu className="w-6 h-6 text-[var(--color-text-secondary)]" />
           </button>
         )}
-
         {activeView === 'chat' ? (
           <ChatArea
             conversation={currentConversation}
@@ -487,14 +500,15 @@ function App() {
           <BookView
             books={books}
             currentBookId={currentBookId}
-            onCreateBook={handleCreateBook}
+            onCreateBookRoadmap={handleCreateBookRoadmap}
+            onGenerateAllModules={handleGenerateAllModules}
+            onAssembleBook={handleAssembleBook}
             onSelectBook={handleSelectBook}
             onDeleteBook={handleDeleteBook}
             hasApiKey={hasApiKey}
           />
         )}
       </div>
-
       <SettingsModal 
         isOpen={settingsOpen} 
         onClose={() => setSettingsOpen(false)} 
@@ -508,12 +522,7 @@ function App() {
         onClose={() => setIsQuizModalOpen(false)} 
         session={studySession} 
       />
-      {isInstallable && !isInstalled && (
-        <InstallPrompt 
-          onInstall={handleInstallApp} 
-          onDismiss={dismissInstallPrompt} 
-        />
-      )}
+      {isInstallable && !isInstalled && ( <InstallPrompt onInstall={handleInstallApp} onDismiss={dismissInstallPrompt} /> )}
     </div>
   );
 }
