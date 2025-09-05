@@ -2,11 +2,12 @@ import React, { useState, useContext, useEffect } from 'react';
 import { 
   Book, Plus, Download, Eye, Trash2, Clock, CheckCircle, 
   AlertCircle, Loader2, BookOpen, Target, Users, Brain,
-  FileText, Sparkles, Play, Pause
+  FileText, Sparkles, Printer
 } from 'lucide-react';
 import { BookProject, BookSession, BookGenerationProgress } from '../types/book';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { bookService } from '../services/bookService';
+import { pdfService } from '../services/pdfService';
 
 interface BookViewProps {
   books: BookProject[];
@@ -29,6 +30,7 @@ export function BookView({
   const [view, setView] = useState<'list' | 'create' | 'detail'>('list');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState<BookGenerationProgress | null>(null);
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
   const [formData, setFormData] = useState<BookSession>({
     goal: '',
     language: selectedLanguage,
@@ -77,6 +79,21 @@ export function BookView({
       setProgress(null);
     }
   };
+  
+  const handleExportPdf = async () => {
+    if (!currentBook || isPdfGenerating) return;
+
+    setIsPdfGenerating(true);
+    try {
+      await pdfService.generatePdf(currentBook);
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      alert('Sorry, there was an error creating the PDF.');
+    } finally {
+      setIsPdfGenerating(false);
+    }
+  };
+
 
   const getStatusIcon = (status: BookProject['status']) => {
     switch (status) {
@@ -442,13 +459,28 @@ export function BookView({
             </div>
             <div className="flex items-center gap-2">
               {currentBook.status === 'completed' && (
-                <button
-                  onClick={() => bookService.downloadAsMarkdown(currentBook)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] text-[var(--color-accent-text)] rounded-lg font-semibold transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  {selectedLanguage === 'en' ? 'Download' : 'डाउनलोड'}
-                </button>
+                <>
+                  <button
+                    onClick={() => bookService.downloadAsMarkdown(currentBook)}
+                    className="flex items-center gap-2 px-3 py-2 bg-[var(--color-card)] hover:bg-[var(--color-border)] text-sm font-semibold rounded-lg transition-colors"
+                    title="Download as Markdown"
+                  >
+                    <Download className="w-4 h-4" />
+                    .md
+                  </button>
+                  <button
+                    onClick={handleExportPdf}
+                    disabled={isPdfGenerating}
+                    className="flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-bg)] hover:bg-[var(--color-accent-bg-hover)] text-[var(--color-accent-text)] text-sm font-semibold rounded-lg transition-colors disabled:opacity-60"
+                  >
+                    {isPdfGenerating ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Printer className="w-4 h-4" />
+                    )}
+                    <span>{isPdfGenerating ? (selectedLanguage === 'en' ? 'Creating...' : 'तयार करत आहे...') : (selectedLanguage === 'en' ? 'Save as PDF' : 'PDF जतन करा')}</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
