@@ -5,7 +5,6 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    include: ['jspdf'], // ADD THIS LINE to pre-bundle jspdf
     exclude: ['lucide-react'],
   },
 });
