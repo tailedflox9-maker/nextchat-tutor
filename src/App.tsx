@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { NoteView } from './components/NoteView';
@@ -9,29 +9,19 @@ import { Conversation, Message, APISettings, Note, StudySession } from './types'
 import { generateId, generateConversationTitle } from './utils/helpers';
 import { usePWA } from './hooks/usePWA';
 import { Menu } from 'lucide-react';
-import { LanguageContext } from './contexts/LanguageContext';
 import { storageUtils } from './utils/storage';
 import { aiService } from './services/aiService';
 
-// BOOK FEATURE IMPORTS
-import { BookView } from './components/BookView';
-import { BookProject, BookSession } from './types/book';
-import { bookService } from './services/bookService';
-
-type ActiveView = 'chat' | 'note' | 'book';
+type ActiveView = 'chat' | 'note';
 
 function App() {
-  const { selectedLanguage } = useContext(LanguageContext);
-
   // --- STATE INITIALIZATION ---
   const [conversations, setConversations] = useState<Conversation[]>(() => storageUtils.getConversations());
   const [notes, setNotes] = useState<Note[]>(() => storageUtils.getNotes());
-  const [books, setBooks] = useState<BookProject[]>(() => storageUtils.getBooks());
   const [settings, setSettings] = useState<APISettings>(() => storageUtils.getSettings());
   const [activeView, setActiveView] = useState<ActiveView>('chat');
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
-  const [currentBookId, setCurrentBookId] = useState<string | null>(null);
   const [sidebarFolded, setSidebarFolded] = useState(() => JSON.parse(localStorage.getItem('ai-tutor-sidebar-folded') || 'false'));
   
   const [isChatLoading, setIsChatLoading] = useState(false);
@@ -72,14 +62,11 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const apiKey = settings.googleApiKey || settings.zhipuApiKey || settings.mistralApiKey;
-    aiService.updateSettings(settings, selectedLanguage);
-    bookService.updateSettings(apiKey, selectedLanguage);
-  }, [settings, selectedLanguage]);
+    aiService.updateSettings(settings);
+  }, [settings]);
 
   useEffect(() => { storageUtils.saveConversations(conversations); }, [conversations]);
   useEffect(() => { storageUtils.saveNotes(notes); }, [notes]);
-  useEffect(() => { storageUtils.saveBooks(books); }, [books]);
   useEffect(() => { localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded)); }, [sidebarFolded]);
 
   // --- MEMOS ---
@@ -92,21 +79,12 @@ function App() {
     setActiveView('chat');
     setCurrentConversationId(id);
     setCurrentNoteId(null);
-    setCurrentBookId(null);
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
   const handleSelectNote = (id: string | null) => {
     setActiveView('note');
     setCurrentNoteId(id);
     setCurrentConversationId(null);
-    setCurrentBookId(null);
-    if (window.innerWidth < 1024) setSidebarOpen(false);
-  };
-  const handleSelectBook = (id: string | null) => {
-    setActiveView('book');
-    setCurrentBookId(id);
-    setCurrentConversationId(null);
-    setCurrentNoteId(null);
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
@@ -114,7 +92,7 @@ function App() {
   const handleNewConversation = () => {
     const newConversation: Conversation = {
       id: generateId(), 
-      title: selectedLanguage === 'en' ? 'New Chat' : 'नवीन चॅट', 
+      title: 'New Chat', 
       messages: [], 
       createdAt: new Date(), 
       updatedAt: new Date(),
@@ -122,24 +100,10 @@ function App() {
     setConversations(prev => [newConversation, ...prev]);
     handleSelectConversation(newConversation.id);
   };
-  
-  const handleNewPersonaConversation = (systemPrompt: string) => {
-    const newConversation: Conversation = {
-      id: generateId(),
-      title: generateConversationTitle(systemPrompt),
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isPersona: true,
-      systemPrompt: systemPrompt,
-    };
-    setConversations(prev => [newConversation, ...prev]);
-    handleSelectConversation(newConversation.id);
-  };
 
   const handleSendMessage = async (content: string) => {
     if (!hasApiKey) {
-      alert(selectedLanguage === 'en' ? 'Please set your API key in the settings first.' : 'कृपया प्रथम सेटिंग्जमध्ये तुमची API की सेट करा.');
+      alert('Please set your API key in the settings first.');
       return;
     }
 
@@ -161,7 +125,7 @@ function App() {
     } else {
       conversationToUpdate = {
         ...existingConversation,
-        title: existingConversation.messages.length === 0 && !existingConversation.isPersona 
+        title: existingConversation.messages.length === 0 
                ? generateConversationTitle(content) 
                : existingConversation.title,
         messages: [...existingConversation.messages, userMessage],
@@ -180,7 +144,7 @@ function App() {
       let fullResponse = '';
       const messagesForApi = conversationToUpdate.messages.map(m => ({ role: m.role, content: m.content }));
 
-      for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage, conversationToUpdate.systemPrompt)) {
+      for await (const chunk of aiService.generateStreamingResponse(messagesForApi)) {
         if (stopStreamingRef.current) break;
         fullResponse += chunk;
         setStreamingMessage(prev => (prev ? { ...prev, content: fullResponse } : null));
@@ -252,7 +216,7 @@ function App() {
         setStreamingMessage(assistantMessage);
 
         let fullResponse = '';
-        for await (const chunk of aiService.generateStreamingResponse(messagesForApi, selectedLanguage, conversation.systemPrompt)) {
+        for await (const chunk of aiService.generateStreamingResponse(messagesForApi)) {
             if (stopStreamingRef.current) break;
             fullResponse += chunk;
             setStreamingMessage(prev => prev ? { ...prev, content: fullResponse } : null);
@@ -280,6 +244,12 @@ function App() {
     }
   };
   
+  const sortedConversations = useMemo(() => [...conversations].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  }), [conversations]);
+
   const handleDeleteConversation = (id: string) => {
     const remaining = conversations.filter(c => c.id !== id);
     setConversations(remaining);
@@ -330,96 +300,6 @@ function App() {
     }
   };
   
-  // --- BOOK HANDLERS (REFACTORED) ---
-  const handleBookProgressUpdate = (bookId: string, updates: Partial<BookProject>) => {
-    setBooks(prev => prev.map(book => book.id === bookId ? { ...book, ...updates, updatedAt: new Date() } : book));
-  };
-  
-  const handleCreateBookRoadmap = async (session: BookSession): Promise<void> => {
-    const newBook: BookProject = {
-      id: generateId(),
-      title: session.goal,
-      goal: session.goal,
-      language: session.language,
-      status: 'planning',
-      progress: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      modules: []
-    };
-    
-    setBooks(prev => [newBook, ...prev]);
-    handleSelectBook(newBook.id);
-    bookService.setProgressCallback(handleBookProgressUpdate);
-
-    try {
-      await bookService.generateRoadmap(session, newBook.id);
-    } catch (error) {
-      console.error("Roadmap generation failed:", error);
-    }
-  };
-  
-  const handleGenerateAllModules = async (book: BookProject, session: BookSession): Promise<void> => {
-    if (!book.roadmap) return;
-    handleBookProgressUpdate(book.id, { status: 'generating_content' });
-    
-    const modulesToGenerate = book.roadmap.modules.filter(roadmapModule => 
-      !book.modules.find(m => m.roadmapModuleId === roadmapModule.id && m.status === 'completed')
-    );
-
-    let completedModules = [...book.modules];
-    const totalModules = book.roadmap.modules.length;
-    const initialProgress = 10;
-    const generationProgress = 80;
-
-    for (const roadmapModule of modulesToGenerate) {
-      try {
-        const newModule = await bookService.generateModuleContent(
-          { ...book, modules: completedModules },
-          roadmapModule,
-          session
-        );
-        completedModules.push(newModule);
-        
-        const currentProgress = initialProgress + (completedModules.length / totalModules) * generationProgress;
-        
-        handleBookProgressUpdate(book.id, { 
-          modules: [...completedModules],
-          progress: currentProgress,
-        });
-
-      } catch (error) {
-        console.error(`Failed to generate module ${roadmapModule.title}`, error);
-        handleBookProgressUpdate(book.id, { 
-            status: 'error', 
-            error: `Failed on module: ${roadmapModule.title}. You can retry.` 
-        });
-        return;
-      }
-    }
-  };
-
-  const handleAssembleBook = async (book: BookProject, session: BookSession): Promise<void> => {
-    try {
-      await bookService.assembleFinalBook(book, session);
-    } catch (error) {
-      console.error("Failed to assemble book:", error);
-      handleBookProgressUpdate(book.id, { status: 'error', error: 'Final assembly failed.' });
-    }
-  };
-
-  const handleDeleteBook = (id: string) => {
-    if (window.confirm(selectedLanguage === 'en' 
-      ? 'Are you sure you want to delete this book?' 
-      : 'तुम्हाला खात्री आहे की तुम्हाला हे पुस्तक हटवायचे आहे?')) {
-      setBooks(prev => prev.filter(b => b.id !== id));
-      if (currentBookId === id) {
-        setCurrentBookId(null);
-        setActiveView('chat');
-      }
-    }
-  };
-  
   // --- OTHER HANDLERS ---
   const handleModelChange = (model: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral') => {
     const newSettings = { ...settings, selectedModel: model };
@@ -432,11 +312,6 @@ function App() {
   const handleInstallApp = async () => { if (await installApp()) console.log('App installed'); };
   const handleStopGenerating = () => stopStreamingRef.current = true;
 
-  const sortedConversations = useMemo(() => [...conversations].sort((a, b) => {
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
-    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-  }), [conversations]);
   const sortedNotes = useMemo(() => [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), [notes]);
 
   return (
@@ -447,21 +322,16 @@ function App() {
       <Sidebar
         conversations={sortedConversations}
         notes={sortedNotes}
-        books={books}
         activeView={activeView}
         currentConversationId={currentConversationId}
         currentNoteId={currentNoteId}
-        currentBookId={currentBookId}
         onNewConversation={handleNewConversation}
-        onNewPersonaConversation={handleNewPersonaConversation}
         onSelectConversation={handleSelectConversation}
         onSelectNote={handleSelectNote}
-        onSelectBook={handleSelectBook}
         onDeleteConversation={handleDeleteConversation}
         onRenameConversation={handleRenameConversation}
         onTogglePinConversation={handleTogglePinConversation}
         onDeleteNote={handleDeleteNote}
-        onDeleteBook={handleDeleteBook}
         onOpenSettings={() => setSettingsOpen(true)}
         settings={settings}
         onModelChange={handleModelChange}
@@ -495,19 +365,8 @@ function App() {
             onEditMessage={handleEditMessage}
             onRegenerateResponse={handleRegenerateResponse}
           />
-        ) : activeView === 'note' ? (
-          <NoteView note={currentNote} />
         ) : (
-          <BookView
-            books={books}
-            currentBookId={currentBookId}
-            onCreateBookRoadmap={handleCreateBookRoadmap}
-            onGenerateAllModules={handleGenerateAllModules}
-            onAssembleBook={handleAssembleBook}
-            onSelectBook={handleSelectBook}
-            onDeleteBook={handleDeleteBook}
-            hasApiKey={hasApiKey}
-          />
+          <NoteView note={currentNote} />
         )}
       </div>
       <SettingsModal 
@@ -515,8 +374,6 @@ function App() {
         onClose={() => setSettingsOpen(false)} 
         settings={settings} 
         onSaveSettings={handleSaveSettings} 
-        isSidebarFolded={sidebarFolded} 
-        isSidebarOpen={sidebarOpen} 
       />
       <QuizModal 
         isOpen={isQuizModalOpen} 
