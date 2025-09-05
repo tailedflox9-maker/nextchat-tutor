@@ -1,26 +1,32 @@
 import React, { useContext, useState, useMemo } from 'react';
 import {
   Plus, MessageSquare, Settings, Trash2, X, ChevronLeft, ChevronRight,
-  Sparkles, Brain, Cloud, Terminal, Search, Pin, Edit, Users, Wand2, Book
+  Sparkles, Brain, Cloud, Terminal, Search, Pin, Edit, Users, Wand2, Book,
+  BookOpen, CheckCircle, AlertCircle, Loader2
 } from 'lucide-react';
 import { Conversation, Note } from '../types';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { aiService } from '../services/aiService';
+import { BookProject } from '../types/book';
 
 interface SidebarProps {
   conversations: Conversation[];
   notes: Note[];
-  activeView: 'chat' | 'note';
+  books: BookProject[];
+  activeView: 'chat' | 'note' | 'book';
   currentConversationId: string | null;
   currentNoteId: string | null;
+  currentBookId: string | null;
   onNewConversation: () => void;
   onNewPersonaConversation: (systemPrompt: string) => void;
   onSelectConversation: (id: string) => void;
   onSelectNote: (id: string) => void;
+  onSelectBook: (id: string) => void;
   onDeleteConversation: (id: string) => void;
   onRenameConversation: (id: string, newTitle: string) => void;
   onTogglePinConversation: (id: string) => void;
   onDeleteNote: (id: string) => void;
+  onDeleteBook: (id: string) => void;
   onOpenSettings: () => void;
   settings: { selectedModel: string };
   onModelChange: (model: any) => void;
@@ -33,17 +39,21 @@ interface SidebarProps {
 export function Sidebar({
   conversations,
   notes,
+  books,
   activeView,
   currentConversationId,
   currentNoteId,
+  currentBookId,
   onNewConversation,
   onNewPersonaConversation,
   onSelectConversation,
   onSelectNote,
+  onSelectBook,
   onDeleteConversation,
   onRenameConversation,
   onTogglePinConversation,
   onDeleteNote,
+  onDeleteBook,
   onOpenSettings,
   settings,
   onModelChange,
@@ -56,7 +66,7 @@ export function Sidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
-  const [view, setView] = useState<'chats' | 'personas' | 'notes'>('chats');
+  const [view, setView] = useState<'chats' | 'personas' | 'notes' | 'books'>('chats');
   const [personaPrompt, setPersonaPrompt] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
 
@@ -82,6 +92,13 @@ export function Sidebar({
       n.content.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [notes, searchQuery]);
+
+  const filteredBooks = useMemo(() => {
+    return books.filter(b =>
+      b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.goal.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [books, searchQuery]);
 
   const handleStartEditing = (conversation: Conversation) => {
     setEditingId(conversation.id);
@@ -225,7 +242,7 @@ export function Sidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 border-t border-[var(--color-border)] mt-2 flex flex-col">
-        {(view === 'chats' || view === 'notes') && !isFolded && (
+        {(view === 'chats' || view === 'notes' || view === 'books') && !isFolded && (
           <div className="relative mb-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" />
             <input
@@ -367,6 +384,84 @@ export function Sidebar({
             ) : null}
           </div>
         )}
+        {view === 'books' && !isFolded && (
+          <div className="space-y-1">
+            {filteredBooks.length > 0 ? (
+              filteredBooks.map((book) => (
+                <div
+                  key={book.id}
+                  onClick={() => onSelectBook(book.id)}
+                  className={`group p-2.5 rounded-lg cursor-pointer ${
+                    activeView === 'book' && currentBookId === book.id
+                      ? 'bg-[var(--color-accent-bg)] text-[var(--color-accent-text)]'
+                      : 'hover:bg-[var(--color-card)] text-[var(--color-text-primary)]'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {book.status === 'completed' ? (
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        ) : book.status === 'error' ? (
+                          <AlertCircle className="w-4 h-4 text-red-500" />
+                        ) : (
+                          <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                        )}
+                        <span className="flex-1 text-sm font-semibold truncate pr-2">{book.title}</span>
+                      </div>
+                      <p className="text-xs opacity-70 line-clamp-1">{book.goal}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {book.status !== 'completed' && book.status !== 'error' && (
+                          <div className="flex-1">
+                            <div className="w-full bg-[var(--color-border)] rounded-full h-1">
+                              <div
+                                className="bg-blue-500 h-1 rounded-full transition-all duration-300"
+                                style={{ width: `${book.progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        <span className="text-xs opacity-60">{book.progress}%</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteBook(book.id);
+                      }}
+                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-900/30 text-red-400"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : searchQuery ? (
+              <div className="text-center py-8 px-4">
+                <Book className="w-12 h-12 mx-auto text-[var(--color-text-secondary)] opacity-50 mb-3" />
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  {selectedLanguage === 'en'
+                    ? 'No books found'
+                    : 'कोणतीही पुस्तके आढळली नाहीत'}
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-8 px-4">
+                <Book className="w-12 h-12 mx-auto text-[var(--color-text-secondary)] opacity-50 mb-3" />
+                <p className="text-sm text-[var(--color-text-secondary)] mb-2">
+                  {selectedLanguage === 'en'
+                    ? 'No books created yet'
+                    : 'अजून कोणतीही पुस्तके तयार केली नाहीत'}
+                </p>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  {selectedLanguage === 'en'
+                    ? 'Generate comprehensive learning books with AI'
+                    : 'AI सह सर्वसमावेशक शिकण्याच्या पुस्तका तयार करा'}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
         {view === 'personas' && !isFolded && (
           <div className="p-2 flex flex-col h-full">
             <h3 className="text-base font-semibold mb-2">
@@ -404,7 +499,7 @@ export function Sidebar({
       </div>
 
       <div className="p-2 border-t border-[var(--color-border)]">
-        <div className={`space-y-1 ${isFolded ? 'flex flex-col' : 'grid grid-cols-3 gap-1'}`}>
+        <div className={`space-y-1 ${isFolded ? 'flex flex-col' : 'grid grid-cols-4 gap-1'}`}>
           <button
             onClick={() => setView('chats')}
             className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${
@@ -431,6 +526,15 @@ export function Sidebar({
           >
             <Book className="w-5 h-5" />
             {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Notes' : 'नोट्स'}</span>}
+          </button>
+          <button
+            onClick={() => setView('books')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${
+              view === 'books' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+            }`}
+          >
+            <BookOpen className="w-5 h-5" />
+            {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Books' : 'पुस्तके'}</span>}
           </button>
         </div>
         {!isFolded && (
