@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "lucide-react": "^0.344.0",
     "jspdf": "^2.5.1",
-    "marked": "^13.0.1", // <-- THIS LINE IS ADDED
+    "lucide-react": "^0.344.0",
+    "marked": "^13.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
+    "@types/marked": "^6.0.0",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@types/react-syntax-highlighter": "^15.5.13",
