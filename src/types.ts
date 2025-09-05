@@ -1,3 +1,5 @@
+export type TutorMode = 'standard' | 'exam' | 'mentor' | 'creative';
+
 export interface Conversation {
   id: string;
   title: string;
@@ -30,6 +32,7 @@ export interface APISettings {
   zhipuApiKey: string;
   mistralApiKey: string;
   selectedModel: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral';
+  selectedTutorMode: TutorMode;
 }
 
 export interface StudySession {
