@@ -4,7 +4,7 @@ export interface BookProject {
   title: string;
   goal: string;
   language: 'en' | 'mr';
-  status: 'planning' | 'generating_roadmap' | 'generating_modules' | 'assembling' | 'completed' | 'error';
+  status: 'planning' | 'generating_roadmap' | 'roadmap_completed' | 'generating_content' | 'assembling' | 'completed' | 'error';
   progress: number; // 0-100
   createdAt: Date;
   updatedAt: Date;
