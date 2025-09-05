@@ -68,48 +68,42 @@ class BookGenerationService {
       `Create a comprehensive learning roadmap for: "${session.goal}"
       
       Requirements:
-      - Generate 8-12 modules in logical learning sequence
-      - Each module should have a clear title and 3-5 specific learning objectives
-      - Estimate reading/study time for each module
-      - Determine overall difficulty level (beginner/intermediate/advanced)
+      - Generate a suitable number of modules (typically 8-12) in a logical learning sequence.
+      - Each module should have a clear, concise title and 3-5 specific learning objectives.
+      - Estimate a realistic reading/study time for each module.
+      - Determine the overall difficulty level (beginner/intermediate/advanced).
       - Target audience: ${session.targetAudience || 'general learners'}
       - Complexity: ${session.complexityLevel || 'intermediate'}
       
-      Format as JSON:
+      Format the entire response as a single JSON object without any extra text or markdown formatting:
       {
         "modules": [
           {
-            "id": "module_1",
             "title": "Module Title",
             "objectives": ["Objective 1", "Objective 2", "Objective 3"],
-            "estimatedTime": "2-3 hours",
-            "order": 1
+            "estimatedTime": "2-3 hours"
           }
         ],
-        "totalModules": 10,
         "estimatedReadingTime": "20-25 hours",
         "difficultyLevel": "intermediate"
       }` :
       `यासाठी एक सर्वसमावेशक शिकण्याचा रोडमॅप तयार करा: "${session.goal}"
       
       आवश्यकता:
-      - तार्किक शिकण्याच्या क्रमाने 8-12 मॉड्यूल तयार करा
-      - प्रत्येक मॉड्यूलमध्ये स्पष्ट शीर्षक आणि 3-5 विशिष्ट शिकण्याचे उद्दिष्टे असावेत
-      - प्रत्येक मॉड्यूलसाठी वाचन/अभ्यास वेळेचा अंदाज लावा
-      - एकूण कठिणाई पातळी निर्धारित करा (beginner/intermediate/advanced)
+      - तार्किक शिकण्याच्या क्रमाने योग्य संख्येने मॉड्यूल (साधारणपणे 8-12) तयार करा.
+      - प्रत्येक मॉड्यूलमध्ये स्पष्ट, संक्षिप्त शीर्षक आणि 3-5 विशिष्ट शिकण्याचे उद्दिष्टे असावेत.
+      - प्रत्येक मॉड्यूलसाठी वास्तववादी वाचन/अभ्यास वेळेचा अंदाज लावा.
+      - एकूण कठिणाई पातळी निर्धारित करा (beginner/intermediate/advanced).
       
-      JSON स्वरूपात: (English keys वापरा, मराठी content)
+      संपूर्ण प्रतिसाद एका JSON ऑब्जेक्टच्या स्वरूपात द्या, कोणताही अतिरिक्त मजकूर किंवा मार्कडाउन स्वरूपन न वापरता:
       {
         "modules": [
           {
-            "id": "module_1",
             "title": "मॉड्यूल शीर्षक",
             "objectives": ["उद्दिष्ट 1", "उद्दिष्ट 2", "उद्दिष्ट 3"],
-            "estimatedTime": "2-3 तास",
-            "order": 1
+            "estimatedTime": "2-3 तास"
           }
         ],
-        "totalModules": 10,
         "estimatedReadingTime": "20-25 तास",
         "difficultyLevel": "intermediate"
       }`;
@@ -131,8 +125,10 @@ class BookGenerationService {
         title: module.title || `Module ${index + 1}`,
         objectives: Array.isArray(module.objectives) ? module.objectives : [],
         estimatedTime: module.estimatedTime || '1-2 hours',
-        order: module.order || index + 1
+        order: index + 1
       }));
+      
+      roadmap.totalModules = roadmap.modules.length;
 
       this.updateProgress(bookId, { status: 'roadmap_completed', progress: 10, roadmap });
       return roadmap;
