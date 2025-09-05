@@ -29,9 +29,13 @@ class BookGenerationService {
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
         generationConfig: {
           temperature: 0.7,
           topK: 40,
@@ -61,8 +65,54 @@ class BookGenerationService {
     this.updateProgress(bookId, { status: 'generating_roadmap', progress: 5 });
     
     const prompt = this.selectedLanguage === 'en' ? 
-      `Create a comprehensive learning roadmap for: "${session.goal}"...` // Same prompt as before
-      : `यासाठी एक सर्वसमावेशक शिकण्याचा रोडमॅप तयार करा: "${session.goal}"...`; // Same prompt as before
+      `Create a comprehensive learning roadmap for: "${session.goal}"
+      
+      Requirements:
+      - Generate 8-12 modules in logical learning sequence
+      - Each module should have a clear title and 3-5 specific learning objectives
+      - Estimate reading/study time for each module
+      - Determine overall difficulty level (beginner/intermediate/advanced)
+      - Target audience: ${session.targetAudience || 'general learners'}
+      - Complexity: ${session.complexityLevel || 'intermediate'}
+      
+      Format as JSON:
+      {
+        "modules": [
+          {
+            "id": "module_1",
+            "title": "Module Title",
+            "objectives": ["Objective 1", "Objective 2", "Objective 3"],
+            "estimatedTime": "2-3 hours",
+            "order": 1
+          }
+        ],
+        "totalModules": 10,
+        "estimatedReadingTime": "20-25 hours",
+        "difficultyLevel": "intermediate"
+      }` :
+      `यासाठी एक सर्वसमावेशक शिकण्याचा रोडमॅप तयार करा: "${session.goal}"
+      
+      आवश्यकता:
+      - तार्किक शिकण्याच्या क्रमाने 8-12 मॉड्यूल तयार करा
+      - प्रत्येक मॉड्यूलमध्ये स्पष्ट शीर्षक आणि 3-5 विशिष्ट शिकण्याचे उद्दिष्टे असावेत
+      - प्रत्येक मॉड्यूलसाठी वाचन/अभ्यास वेळेचा अंदाज लावा
+      - एकूण कठिणाई पातळी निर्धारित करा (beginner/intermediate/advanced)
+      
+      JSON स्वरूपात: (English keys वापरा, मराठी content)
+      {
+        "modules": [
+          {
+            "id": "module_1",
+            "title": "मॉड्यूल शीर्षक",
+            "objectives": ["उद्दिष्ट 1", "उद्दिष्ट 2", "उद्दिष्ट 3"],
+            "estimatedTime": "2-3 तास",
+            "order": 1
+          }
+        ],
+        "totalModules": 10,
+        "estimatedReadingTime": "20-25 तास",
+        "difficultyLevel": "intermediate"
+      }`;
 
     const response = await this.generateWithGemma(prompt);
     
@@ -72,7 +122,9 @@ class BookGenerationService {
       
       const roadmap = JSON.parse(jsonMatch[0]);
       
-      if (!roadmap.modules || !Array.isArray(roadmap.modules)) throw new Error('Invalid roadmap structure');
+      if (!roadmap.modules || !Array.isArray(roadmap.modules)) {
+        throw new Error('Invalid roadmap structure');
+      }
       
       roadmap.modules = roadmap.modules.map((module: any, index: number) => ({
         id: `module_${index + 1}`,
@@ -102,8 +154,74 @@ class BookGenerationService {
       '';
 
     const prompt = this.selectedLanguage === 'en' ?
-      `Generate a comprehensive chapter for: "${roadmapModule.title}"...` // Same prompt as before
-      : `यासाठी एक सर्वसमावेशक अध्याय तयार करा: "${roadmapModule.title}"...`; // Same prompt as before
+      `Generate a comprehensive chapter for: "${roadmapModule.title}"
+
+      LEARNING GOAL: ${session.goal}
+      MODULE OBJECTIVES: ${roadmapModule.objectives.join(', ')}
+      TARGET AUDIENCE: ${session.targetAudience || 'general learners'}
+      COMPLEXITY LEVEL: ${session.complexityLevel || 'intermediate'}
+      ${previousContent}
+
+      Requirements:
+      - Write a complete, detailed chapter (2000-4000 words)
+      - Build upon previous modules naturally
+      - Include practical examples and code snippets where relevant
+      - Use clear, engaging language
+      - Add section headers with ## markdown syntax
+      - Include bullet points and numbered lists for better readability
+      ${session.preferences?.includeExamples ? '- Include practical examples and demonstrations' : ''}
+      ${session.preferences?.includePracticalExercises ? '- Add hands-on exercises at the end' : ''}
+      
+      Structure:
+      ## ${roadmapModule.title}
+      
+      ### Introduction
+      (Brief overview connecting to previous modules)
+      
+      ### Core Concepts
+      (Main learning content with examples)
+      
+      ### Practical Application
+      (Real-world examples and use cases)
+      
+      ${session.preferences?.includePracticalExercises ? '### Practice Exercises\n(Hands-on activities)' : ''}
+      
+      ### Key Takeaways
+      (Summary of main points)
+      
+      Write in clear, educational language suitable for ${session.complexityLevel || 'intermediate'} level learners.` :
+      
+      `यासाठी एक सर्वसमावेशक अध्याय तयार करा: "${roadmapModule.title}"
+
+      शिकण्याचे लक्ष्य: ${session.goal}
+      मॉड्यूल उद्दिष्टे: ${roadmapModule.objectives.join(', ')}
+      ${previousContent}
+
+      आवश्यकता:
+      - संपूर्ण, तपशीलवार अध्याय लिहा (2000-4000 शब्द)
+      - मागील मॉड्यूल्सवर नैसर्गिकपणे आधारित करा
+      - व्यावहारिक उदाहरणे आणि कोड स्निपेट्स समाविष्ट करा
+      - स्पष्ट, आकर्षक भाषा वापरा
+      - ## मार्कडाउन सिंटॅक्ससह विभाग शीर्षके जोडा
+      ${session.preferences?.includeExamples ? '- व्यावहारिक उदाहरणे आणि प्रात्यक्षिके समाविष्ट करा' : ''}
+      ${session.preferences?.includePracticalExercises ? '- शेवटी व्यावहारिक सराव जोडा' : ''}
+      
+      रचना:
+      ## ${roadmapModule.title}
+      
+      ### परिचय
+      (मागील मॉड्यूल्सशी जोडणारे संक्षिप्त विहंगावलोकन)
+      
+      ### मुख्य संकल्पना
+      (उदाहरणांसह मुख्य शिकण्याची सामग्री)
+      
+      ### व्यावहारिक वापर
+      (वास्तविक-जगातील उदाहरणे आणि वापर)
+      
+      ${session.preferences?.includePracticalExercises ? '### सराव व्यायाम\n(व्यावहारिक क्रियाकलाप)' : ''}
+      
+      ### मुख्य मुद्दे
+      (मुख्य मुद्द्यांचा सारांश)`;
     
     const moduleContent = await this.generateWithGemma(prompt);
 
@@ -144,11 +262,119 @@ class BookGenerationService {
     this.updateProgress(book.id, { status: 'completed', progress: 100, finalBook });
     return finalBook;
   }
+  
+  private async generateBookIntroduction(session: BookSession, roadmap: BookRoadmap): Promise<string> {
+    const prompt = this.selectedLanguage === 'en' ?
+      `Generate a comprehensive introduction for a book about: "${session.goal}"
 
-  // Helper methods for assembly, same prompts as before
-  private async generateBookIntroduction(session: BookSession, roadmap: BookRoadmap): Promise<string> { /* ... same as before ... */ return "..."; }
-  private async generateBookSummary(session: BookSession, modules: BookModule[]): Promise<string> { /* ... same as before ... */ return "..."; }
-  private async generateGlossary(modules: BookModule[]): Promise<string> { /* ... same as before ... */ return "..."; }
+      ROADMAP OVERVIEW:
+      ${roadmap.modules.map(m => `- ${m.title}: ${m.objectives.join(', ')}`).join('\n')}
+      
+      Total Modules: ${roadmap.totalModules}
+      Estimated Reading Time: ${roadmap.estimatedReadingTime}
+      Difficulty Level: ${roadmap.difficultyLevel}
+
+      Write a compelling introduction that:
+      - Welcomes the reader and explains the book's purpose
+      - Outlines what they'll learn and achieve
+      - Explains the book's structure and how to use it
+      - Motivates them to begin their learning journey
+      - Sets appropriate expectations for the difficulty level
+
+      Format with markdown headers (##, ###) and make it engaging and informative.` :
+      
+      `यासाठी एक सर्वसमावेशक प्रस्तावना तयार करा: "${session.goal}"
+
+      रोडमॅप विहंगावलोकन:
+      ${roadmap.modules.map(m => `- ${m.title}: ${m.objectives.join(', ')}`).join('\n')}
+      
+      एकूण मॉड्यूल्स: ${roadmap.totalModules}
+      अंदाजे वाचन वेळ: ${roadmap.estimatedReadingTime}
+      कठिणाई पातळी: ${roadmap.difficultyLevel}
+
+      आकर्षक प्रस्तावना लिहा जी:
+      - वाचकाचे स्वागत करते आणि पुस्तकाचा उद्देश स्पष्ट करते
+      - ते काय शिकतील आणि साध्य करतील याची रूपरेषा देते
+      - पुस्तकाची रचना आणि वापर कसा करावा हे स्पष्ट करते
+      - त्यांना शिकण्याचा प्रवास सुरू करण्यास प्रेरणा देते
+
+      मार्कडाउन हेडर्स (##, ###) वापरून फॉर्मॅट करा.`;
+
+    return await this.generateWithGemma(prompt);
+  }
+
+  private async generateBookSummary(session: BookSession, modules: BookModule[]): Promise<string> {
+    const prompt = this.selectedLanguage === 'en' ?
+      `Generate a comprehensive summary and conclusion for a book about: "${session.goal}"
+
+      MODULES COVERED:
+      ${modules.map(m => `- ${m.title}`).join('\n')}
+
+      Write a conclusion that:
+      - Summarizes the key learning outcomes achieved
+      - Reinforces the most important concepts covered
+      - Provides guidance on next steps and further learning
+      - Congratulates the reader on their progress
+      - Offers resources for continued growth
+
+      Make it inspiring and actionable.` :
+      
+      `यासाठी एक सर्वसमावेशक सारांश आणि निष्कर्ष तयार करा: "${session.goal}"
+
+      समाविष्ट मॉड्यूल्स:
+      ${modules.map(m => `- ${m.title}`).join('\n')}
+
+      निष्कर्ष लिहा जो:
+      - साध्य झालेल्या मुख्य शिकण्याच्या परिणामांचा सारांश देतो
+      - समाविष्ट केलेल्या सर्वात महत्वाच्या संकल्पनांना बळकटी देतो
+      - पुढील पावले आणि पुढील शिकण्यावर मार्गदर्शन करतो
+      - वाचकाच्या प्रगतीबद्दल अभिनंदन करतो
+
+      प्रेरणादायी आणि कार्यक्षम बनवा.`;
+
+    return await this.generateWithGemma(prompt);
+  }
+
+  private async generateGlossary(modules: BookModule[]): Promise<string> {
+    const allContent = modules.map(m => m.content).join('\n\n');
+    
+    const prompt = this.selectedLanguage === 'en' ?
+      `Extract key terms and create a glossary from the following content:
+
+      ${allContent.substring(0, 8000)}...
+
+      Create a glossary with:
+      - 15-25 most important terms and concepts
+      - Clear, concise definitions
+      - Alphabetical order
+      - Markdown formatting
+
+      Format:
+      ## Glossary
+
+      **Term**: Definition here.
+
+      **Another Term**: Another definition here.` :
+      
+      `खालील सामग्रीतून मुख्य संज्ञा काढा आणि शब्दकोश तयार करा:
+
+      ${allContent.substring(0, 8000)}...
+
+      शब्दकोश तयार करा ज्यामध्ये:
+      - 15-25 सर्वात महत्वाच्या संज्ञा आणि संकल्पना
+      - स्पष्ट, संक्षिप्त व्याख्या
+      - वर्णक्रमानुसार क्रम
+      - मार्कडाउन फॉर्मॅटिंग
+
+      फॉर्मॅट:
+      ## शब्दकोश
+
+      **संज्ञा**: येथे व्याख्या.
+
+      **दुसरी संज्ञा**: येथे दुसरी व्याख्या.`;
+
+    return await this.generateWithGemma(prompt);
+  }
 
   downloadAsMarkdown(project: BookProject) {
     if (!project.finalBook) return;
