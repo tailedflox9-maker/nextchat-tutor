@@ -22,7 +22,6 @@ export interface BookAnalytics {
   readingTime: string;
   complexity: 'beginner' | 'intermediate' | 'advanced';
   topics: string[];
-  keyTerms: string[];
 }
 
 export interface BookSharingOptions {
@@ -117,7 +116,6 @@ class BookEnhancementService {
         readingTime: '0 minutes',
         complexity: 'beginner',
         topics: [],
-        keyTerms: []
       };
     }
 
@@ -144,8 +142,6 @@ class BookEnhancementService {
       }
     });
 
-    // Extract key terms (simple approach - can be enhanced with NLP)
-    const keyTerms = this.extractKeyTerms(content);
     const topics = this.extractTopics(book);
 
     return {
@@ -155,26 +151,7 @@ class BookEnhancementService {
         : `${readingTime} minutes`,
       complexity,
       topics,
-      keyTerms
     };
-  }
-
-  private extractKeyTerms(content: string): string[] {
-    // Simple keyword extraction - look for capitalized terms and technical words
-    const words = content.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g) || [];
-    const frequency: { [key: string]: number } = {};
-    
-    words.forEach(word => {
-      const cleaned = word.toLowerCase().trim();
-      if (cleaned.length > 3) {
-        frequency[cleaned] = (frequency[cleaned] || 0) + 1;
-      }
-    });
-
-    return Object.entries(frequency)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 10)
-      .map(([term]) => term);
   }
 
   private extractTopics(book: BookProject): string[] {
@@ -261,20 +238,9 @@ _Use this space for your personal notes and insights_
 
   // Generate study materials from book content
   generateStudyMaterials(book: BookProject): {
-    flashcards: Array<{ question: string; answer: string }>;
     summary: string;
     practiceQuestions: Array<{ question: string; type: 'multiple-choice' | 'short-answer' }>;
   } {
-    // This would ideally use AI to generate study materials
-    // For now, returning a basic structure
-    
-    const keyTerms = this.analyzeBook(book).keyTerms;
-    
-    const flashcards = keyTerms.slice(0, 20).map(term => ({
-      question: `What is ${term}?`,
-      answer: `Key concept from ${book.title} - review the relevant module for details.`
-    }));
-
     const summary = `
 # ${book.title} - Study Summary
 
@@ -284,8 +250,6 @@ ${book.roadmap?.modules.map(m => `- ${m.objectives.join(', ')}`).join('\n') || '
 ## Important Topics
 ${this.analyzeBook(book).topics.map(topic => `- ${topic}`).join('\n')}
 
-## Key Terms to Remember
-${keyTerms.map(term => `- **${term}**`).join('\n')}
     `.trim();
 
     const practiceQuestions = [
@@ -299,7 +263,7 @@ ${keyTerms.map(term => `- **${term}**`).join('\n')}
       }
     ];
 
-    return { flashcards, summary, practiceQuestions };
+    return { summary, practiceQuestions };
   }
 }
 
