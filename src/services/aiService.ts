@@ -95,43 +95,47 @@ class AiService {
     const systemPrompt = this.getSystemPrompt();
 
     switch (this.settings.selectedModel) {
-      case 'google':
-        if (!this.settings.googleApiKey) throw new Error('Google API key not set');
-        const googleUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:streamGenerateContent?key=${this.settings.googleApiKey}&alt=sse`;
-        const googleMessages = userMessages.map(m => ({
-          role: m.role === 'assistant' ? 'model' : m.role,
-          parts: [{ text: m.content }],
-        }));
-        const response = await fetch(googleUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: googleMessages,
-            system_instruction: { parts: [{ text: systemPrompt }] }
-          }),
-        });
+case 'google':
+  if (!this.settings.googleApiKey) throw new Error('Google API key not set');
+  const googleUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:streamGenerateContent?key=${this.settings.googleApiKey}&alt=sse`;
 
-        if (!response.ok || !response.body) throw new Error(`API Error: ${response.status} ${response.statusText}`);
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const json = JSON.parse(line.substring(6));
-                const chunk = json.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (chunk) yield chunk;
-              } catch (e) { console.error('Error parsing stream chunk:', e); }
-            }
-          }
-        }
-        break;
+  // Prepend system prompt as system role (Gemma-compatible)
+  const googleMessages = [
+    { role: 'system', parts: [{ text: systemPrompt }] },
+    ...userMessages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : m.role,
+      parts: [{ text: m.content }],
+    })),
+  ];
+
+  const response = await fetch(googleUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: googleMessages }),
+  });
+
+  if (!response.ok || !response.body) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const json = JSON.parse(line.substring(6));
+          const chunk = json.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (chunk) yield chunk;
+        } catch (e) { console.error('Error parsing stream chunk:', e); }
+      }
+    }
+  }
+  break;
 
       case 'zhipu':
         if (!this.settings.zhipuApiKey) throw new Error('ZhipuAI API key not set');
