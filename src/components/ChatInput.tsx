@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, PlusCircle, Square, ClipboardCheck, Loader2 } from 'lucide-react';
-import { LanguageContext } from '../contexts/LanguageContext';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -12,16 +11,15 @@ interface ChatInputProps {
   canGenerateQuiz: boolean;
 }
 
-export function ChatInput({ 
-  onSendMessage, 
-  isLoading, 
+export function ChatInput({
+  onSendMessage,
+  isLoading,
   isQuizLoading,
-  disabled = false, 
+  disabled = false,
   onStopGenerating,
   onGenerateQuiz,
   canGenerateQuiz
 }: ChatInputProps) {
-  const { selectedLanguage } = useContext(LanguageContext);
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +57,6 @@ export function ChatInput({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
@@ -73,7 +70,7 @@ export function ChatInput({
   const handlePlusClick = () => {
     fileInputRef.current?.click();
   };
-  
+
   const canSend = input.trim() && !disabled;
 
   return (
@@ -87,7 +84,7 @@ export function ChatInput({
           >
             <Square className="w-3 h-3" />
             <span className="hidden sm:inline">
-              {selectedLanguage === 'en' ? 'Stop generating' : 'निर्माण थांबवा'}
+              Stop generating
             </span>
           </button>
         </div>
@@ -96,24 +93,24 @@ export function ChatInput({
       {/* Input form */}
       <form onSubmit={handleSubmit} className="chat-input-form">
         {/* File attach button */}
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={handlePlusClick}
           className="interactive-button flex-shrink-0 p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors touch-target"
-          title={selectedLanguage === 'en' ? 'Attach file content' : 'फाइल सामग्री जोडा'}
+          title={'Attach file content'}
         >
           <PlusCircle className="w-5 h-5" />
         </button>
-        
+
         {/* Hidden file input */}
-        <input 
-          type="file" 
-          ref={fileInputRef} 
+        <input
+          type="file"
+          ref={fileInputRef}
           onChange={handleFileChange}
           accept=".txt,.md,.js,.ts,.jsx,.tsx,.py,.html,.css,.json"
-          className="hidden" 
+          className="hidden"
         />
-        
+
         {/* Text area */}
         <textarea
           ref={textareaRef}
@@ -122,15 +119,15 @@ export function ChatInput({
           onKeyDown={handleKeyDown}
           placeholder={
             disabled
-              ? selectedLanguage === 'en' ? 'Configure API keys first...' : 'प्रथम API की कॉन्फिगर करा...'
-              : selectedLanguage === 'en' ? 'Ask anything...' : 'काहीही विचारा...'
+              ? 'Configure API keys first...'
+              : 'Ask anything...'
           }
           disabled={disabled || isLoading}
           className="chat-input-textarea"
           rows={1}
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         />
-        
+
         {/* Action buttons */}
         <div className="chat-input-buttons">
           {/* Quiz button */}
@@ -143,7 +140,7 @@ export function ChatInput({
                 ? 'bg-transparent text-[var(--color-text-placeholder)] cursor-not-allowed opacity-50'
                 : 'bg-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)]'
             }`}
-            title={selectedLanguage === 'en' ? 'Generate Quiz' : 'प्रश्नोत्तरी तयार करा'}
+            title={'Generate Quiz'}
           >
             {isQuizLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -161,7 +158,7 @@ export function ChatInput({
                 ? 'bg-transparent text-[var(--color-text-placeholder)] cursor-not-allowed opacity-50'
                 : 'bg-[var(--color-accent-bg)] text-[var(--color-bg)] hover:bg-[var(--color-accent-bg-hover)]'
             }`}
-            title={selectedLanguage === 'en' ? 'Send message' : 'संदेश पाठवा'}
+            title={'Send message'}
           >
             <Send className="w-4 h-4" />
           </button>
