@@ -8,12 +8,15 @@ import {
 import { BookProject, BookSession, BookGenerationProgress } from '../types/book';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { bookService } from '../services/bookService';
+import { BookAnalytics } from './BookAnalytics'; // Assuming you might want this later
 
 interface BookViewProps {
   books: BookProject[];
   currentBookId: string | null;
-  onCreateBook: (session: BookSession) => Promise<void>;
-  onSelectBook: (id: string) => void;
+  onCreateBookRoadmap: (session: BookSession) => Promise<void>; // Corrected prop name
+  onGenerateAllModules: (book: BookProject, session: BookSession) => Promise<void>; // Added
+  onAssembleBook: (book: BookProject, session: BookSession) => Promise<void>; // Added
+  onSelectBook: (id: string | null) => void;
   onDeleteBook: (id: string) => void;
   hasApiKey: boolean;
 }
@@ -21,7 +24,9 @@ interface BookViewProps {
 export function BookView({ 
   books, 
   currentBookId, 
-  onCreateBook, 
+  onCreateBookRoadmap, // Renamed from onCreateBook for clarity
+  onGenerateAllModules, // Added
+  onAssembleBook, // Added
   onSelectBook, 
   onDeleteBook,
   hasApiKey 
@@ -29,7 +34,7 @@ export function BookView({
   const { selectedLanguage } = useContext(LanguageContext);
   const [view, setView] = useState<'list' | 'create' | 'detail'>('list');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState<BookGenerationProgress | null>(null);
+
   const [formData, setFormData] = useState<BookSession>({
     goal: '',
     language: selectedLanguage,
@@ -45,6 +50,15 @@ export function BookView({
   const currentBook = currentBookId ? books.find(b => b.id === currentBookId) : null;
   
   useEffect(() => {
+    // If a book is selected, switch to detail view
+    if (currentBookId && books.some(b => b.id === currentBookId)) {
+      setView('detail');
+    } else {
+      setView('list'); // Default to list if no book or invalid book id
+    }
+  }, [currentBookId, books]);
+
+  useEffect(() => {
     setFormData(prev => ({ ...prev, language: selectedLanguage }));
   }, [selectedLanguage]);
 
@@ -52,14 +66,17 @@ export function BookView({
     if (!formData.goal.trim() || !hasApiKey) return;
 
     setIsGenerating(true);
-    setProgress(null);
-    
-    // Set up progress callback
-    bookService.setProgressCallback(setProgress);
     
     try {
-      await onCreateBook(formData);
-      setView('list');
+      // This function from App.tsx now handles the entire creation process
+      await onCreateBookRoadmap(formData); 
+      // App.tsx will handle view switching by setting the new book ID
+    } catch (error) {
+      console.error('Error creating book:', error);
+      alert(selectedLanguage === 'en' ? 'Failed to create book. Please try again.' : 'पुस्तक तयार करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.');
+    } finally {
+      setIsGenerating(false);
+      // Reset form only after successful creation is confirmed by App state
       setFormData({
         goal: '',
         language: selectedLanguage,
@@ -71,15 +88,9 @@ export function BookView({
           includeQuizzes: false
         }
       });
-    } catch (error) {
-      console.error('Error creating book:', error);
-      alert(selectedLanguage === 'en' ? 'Failed to create book. Please try again.' : 'पुस्तक तयार करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.');
-    } finally {
-      setIsGenerating(false);
-      setProgress(null);
     }
   };
-
+  
   const getStatusIcon = (status: BookProject['status']) => {
     switch (status) {
       case 'completed':
@@ -88,8 +99,9 @@ export function BookView({
         return <AlertCircle className="w-5 h-5 text-red-500" />;
       case 'planning':
       case 'generating_roadmap':
-      case 'generating_modules':
+      case 'generating_content': // Corrected status name
       case 'assembling':
+      case 'roadmap_completed': // Added status
         return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
       default:
         return <Book className="w-5 h-5 text-gray-500" />;
@@ -100,7 +112,8 @@ export function BookView({
     const statusMap = {
       planning: selectedLanguage === 'en' ? 'Planning' : 'नियोजन',
       generating_roadmap: selectedLanguage === 'en' ? 'Creating Roadmap' : 'रोडमॅप तयार करत आहे',
-      generating_modules: selectedLanguage === 'en' ? 'Writing Chapters' : 'अध्याय लिहित आहे',
+      roadmap_completed: selectedLanguage === 'en' ? 'Roadmap Complete' : 'रोडमॅप पूर्ण',
+      generating_content: selectedLanguage === 'en' ? 'Writing Chapters' : 'अध्याय लिहित आहे',
       assembling: selectedLanguage === 'en' ? 'Finalizing Book' : 'पुस्तक अंतिम करत आहे',
       completed: selectedLanguage === 'en' ? 'Completed' : 'पूर्ण',
       error: selectedLanguage === 'en' ? 'Error' : 'त्रुटी'
@@ -179,7 +192,6 @@ export function BookView({
                   }`}
                   onClick={() => {
                     onSelectBook(book.id);
-                    setView('detail');
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -276,7 +288,7 @@ export function BookView({
                 <div className="text-center mb-6">
                   <Loader2 className="w-12 h-12 mx-auto text-blue-500 animate-spin mb-4" />
                   <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-                    {selectedLanguage === 'en' ? 'Generating Your Book' : 'तुमचे पुस्तक तयार करत आहे'}
+                    {selectedLanguage === 'en' ? 'Generating Your Book...' : 'तुमचे पुस्तक तयार होत आहे...'}
                   </h3>
                   <p className="text-[var(--color-text-secondary)]">
                     {selectedLanguage === 'en' 
@@ -284,23 +296,6 @@ export function BookView({
                       : 'यास काही मिनिटे लागू शकतात. कृपया हा टॅब बंद करू नका.'}
                   </p>
                 </div>
-
-                {progress && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-[var(--color-text-secondary)]">{progress.stage}</span>
-                      <span className="text-[var(--color-text-primary)] font-medium">
-                        {progress.currentModule && progress.totalModules 
-                          ? `${progress.currentModule}/${progress.totalModules}` 
-                          : ''}
-                      </span>
-                    </div>
-                    <p className="text-[var(--color-text-primary)] font-medium">{progress.message}</p>
-                    <div className="text-xs text-[var(--color-text-secondary)]">
-                      {progress.timestamp.toLocaleTimeString()}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           ) : (
@@ -335,7 +330,7 @@ export function BookView({
                         onChange={(e) => setFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
                         placeholder={selectedLanguage === 'en' 
                           ? 'e.g., Students, Professionals, Beginners...'
-                          : 'उदा., विद्यार्थी, व्यावसायिक, सुरुवातीचे...'}
+                          : 'उदा., विद्यार्थी, व्यावसायिक, नवशिक्या...'}
                         className="w-full p-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-[var(--color-text-primary)]"
                       />
                     </div>
@@ -417,13 +412,20 @@ export function BookView({
 
   // Detail View
   if (view === 'detail' && currentBook) {
+    const sessionForActions: BookSession = {
+      goal: currentBook.goal,
+      language: currentBook.language,
+    };
+    const canGenerateModules = currentBook.status === 'roadmap_completed' || (currentBook.status === 'error' && currentBook.roadmap);
+    const canAssemble = currentBook.status === 'generating_content' && currentBook.modules.length === currentBook.roadmap?.modules.length;
+
     return (
       <div className="flex-1 flex flex-col h-full">
         <div className="p-4 sm:p-6 border-b border-[var(--color-border)]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setView('list')}
+                onClick={() => onSelectBook(null)}
                 className="p-2 hover:bg-[var(--color-card)] rounded-lg transition-colors"
               >
                 <Book className="w-5 h-5" />
@@ -461,6 +463,35 @@ export function BookView({
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="max-w-4xl mx-auto space-y-6">
+            {/* Actions */}
+            {currentBook.status !== 'completed' && (
+              <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+                  {selectedLanguage === 'en' ? 'Next Steps' : 'पुढील पायऱ्या'}
+                </h3>
+                {canGenerateModules && (
+                  <button onClick={() => onGenerateAllModules(currentBook, sessionForActions)} className="w-full flex items-center justify-center gap-3 py-3 px-6 rounded-lg font-semibold text-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors">
+                    <Play className="w-5 h-5" />
+                    {selectedLanguage === 'en' ? 'Generate All Chapters' : 'सर्व अध्याय तयार करा'}
+                  </button>
+                )}
+                 {canAssemble && (
+                  <button onClick={() => onAssembleBook(currentBook, sessionForActions)} className="w-full flex items-center justify-center gap-3 py-3 px-6 rounded-lg font-semibold text-lg bg-green-600 hover:bg-green-700 text-white transition-colors">
+                    <CheckCircle className="w-5 h-5" />
+                    {selectedLanguage === 'en' ? 'Assemble Final Book' : 'अंतिम पुस्तक एकत्र करा'}
+                  </button>
+                )}
+                {currentBook.status === 'generating_content' && (
+                   <div className="text-center text-sm text-[var(--color-text-secondary)] mt-2">
+                    {selectedLanguage === 'en' ? 'Generating chapters... this may take some time.' : 'अध्याय तयार होत आहेत... यास थोडा वेळ लागू शकतो.'}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Analytics for completed book */}
+            {currentBook.status === 'completed' && <BookAnalytics book={currentBook} />}
+
             {/* Book Info */}
             <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
               <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
@@ -494,31 +525,11 @@ export function BookView({
                     {selectedLanguage === 'en' ? 'Modules:' : 'मॉड्यूल:'}
                   </span>
                   <p className="text-[var(--color-text-primary)] font-medium">
-                    {currentBook.modules.length} {selectedLanguage === 'en' ? 'completed' : 'पूर्ण'}
+                    {currentBook.modules.length} / {currentBook.roadmap?.modules.length || '?'} {selectedLanguage === 'en' ? 'completed' : 'पूर्ण'}
                   </p>
                 </div>
               </div>
             </div>
-
-            {/* Progress */}
-            {currentBook.status !== 'completed' && currentBook.status !== 'error' && (
-              <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-                  {selectedLanguage === 'en' ? 'Generation Progress' : 'निर्मिती प्रगती'}
-                </h3>
-                <div className="space-y-4">
-                  <div className="w-full bg-[var(--color-border)] rounded-full h-3">
-                    <div
-                      className="bg-blue-500 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${currentBook.progress}%` }}
-                    />
-                  </div>
-                  <p className="text-sm text-[var(--color-text-secondary)]">
-                    {currentBook.progress}% {selectedLanguage === 'en' ? 'complete' : 'पूर्ण'}
-                  </p>
-                </div>
-              </div>
-            )}
 
             {/* Roadmap */}
             {currentBook.roadmap && (
@@ -597,3 +608,4 @@ export function BookView({
   }
 
   return null;
+}
