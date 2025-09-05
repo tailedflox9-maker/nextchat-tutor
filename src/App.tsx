@@ -399,15 +399,6 @@ function App() {
     }
   };
 
-  const handleRetryModuleGeneration = async (book: BookProject): Promise<void> => {
-    const session: BookSession = {
-      goal: book.goal,
-      language: book.language,
-    };
-    handleBookProgressUpdate(book.id, { status: 'generating_content', error: undefined });
-    await handleGenerateAllModules(book, session);
-  };
-
   const handleAssembleBook = async (book: BookProject, session: BookSession): Promise<void> => {
     try {
       await bookService.assembleFinalBook(book, session);
@@ -515,7 +506,6 @@ function App() {
             onAssembleBook={handleAssembleBook}
             onSelectBook={handleSelectBook}
             onDeleteBook={handleDeleteBook}
-            onRetryModuleGeneration={handleRetryModuleGeneration}
             hasApiKey={hasApiKey}
           />
         )}
