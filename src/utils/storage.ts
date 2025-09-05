@@ -1,8 +1,10 @@
-import { Conversation, APISettings, Note } from '../types';
+// src/utils/storage.ts (Updated with book support)
+import { Conversation, APISettings, Note, BookProject } from '../types';
 
 const CONVERSATIONS_KEY = 'ai-tutor-conversations';
 const SETTINGS_KEY = 'ai-tutor-settings';
 const NOTES_KEY = 'ai-tutor-notes';
+const BOOKS_KEY = 'ai-tutor-books';
 
 const defaultSettings: APISettings = {
   googleApiKey: '',
@@ -85,10 +87,40 @@ export const storageUtils = {
     }
   },
 
+  getBooks(): BookProject[] {
+    try {
+      const stored = localStorage.getItem(BOOKS_KEY);
+      if (!stored) return [];
+      
+      const parsed = JSON.parse(stored);
+      return parsed.map((book: any) => ({
+        ...book,
+        createdAt: new Date(book.createdAt),
+        updatedAt: new Date(book.updatedAt),
+        modules: book.modules?.map((module: any) => ({
+          ...module,
+          generatedAt: module.generatedAt ? new Date(module.generatedAt) : undefined,
+        })) || [],
+      }));
+    } catch (error) {
+      console.error('Error loading books:', error);
+      return [];
+    }
+  },
+
+  saveBooks(books: BookProject[]): void {
+    try {
+      localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
+    } catch (error) {
+      console.error('Error saving books:', error);
+    }
+  },
+
   clearAllData(): void {
     localStorage.removeItem(CONVERSATIONS_KEY);
     localStorage.removeItem(SETTINGS_KEY);
     localStorage.removeItem(NOTES_KEY);
+    localStorage.removeItem(BOOKS_KEY);
     // Add any other keys you might use
   }
 };
