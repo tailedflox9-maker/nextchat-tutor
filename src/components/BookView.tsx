@@ -4,7 +4,7 @@ import {
   AlertCircle, Loader2, BookOpen, Target, Users, Brain,
   FileText, Sparkles, Printer, BarChart3, ListChecks
 } from 'lucide-react';
-import { BookProject, BookSession } from '../types/book';
+import { BookProject, BookSession, BookGenerationProgress } from '../types/book';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { bookService } from '../services/bookService';
 import { pdfService } from '../services/pdfService';
@@ -72,7 +72,7 @@ export function BookView({
   const handleSelectTemplate = (template: BookTemplate) => {
     setFormData(prev => ({
       ...prev,
-      goal: '', // Keep goal empty for user to fill
+      goal: '',
       targetAudience: template.targetAudience,
       preferences: template.preferences,
     }));
@@ -88,7 +88,7 @@ export function BookView({
     try {
       await onCreateBook(formData);
       setView('list');
-      setCreationStep('template'); // Reset for next time
+      setCreationStep('template');
     } catch (error) {
       console.error('Error creating book:', error);
       alert(selectedLanguage === 'en' ? 'Failed to create book.' : 'पुस्तक तयार करण्यात अयशस्वी.');
@@ -111,7 +111,6 @@ export function BookView({
     }
   };
 
-  // ... (getStatusIcon and getStatusText remain the same) ...
   const getStatusIcon = (status: BookProject['status']) => {
     switch (status) {
       case 'completed': return <CheckCircle className="w-5 h-5 text-green-500" />;
@@ -119,6 +118,7 @@ export function BookView({
       default: return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
     }
   };
+
   const getStatusText = (status: BookProject['status']) => {
     const statusMap = {
       planning: selectedLanguage === 'en' ? 'Planning' : 'नियोजन',
@@ -152,8 +152,7 @@ export function BookView({
             </button>
           </div>
         </div>
-        {/* ... (Rest of list view remains the same) ... */}
-         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {!hasApiKey && (
             <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-6">
               <div className="flex items-center gap-3">
@@ -285,7 +284,6 @@ export function BookView({
         </div>
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {isGenerating ? (
-            // ... (Generation progress UI remains the same) ...
             <div className="max-w-2xl mx-auto">
               <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
                 <div className="text-center mb-6">
@@ -299,7 +297,6 @@ export function BookView({
                       : 'यास काही मिनिटे लागू शकतात. कृपया हा टॅब बंद करू नका.'}
                   </p>
                 </div>
-
                 {progress && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between text-sm">
@@ -321,7 +318,6 @@ export function BookView({
           ) : creationStep === 'template' ? (
             <BookTemplateSelector templates={templates} onSelectTemplate={handleSelectTemplate} onSkip={() => setCreationStep('form')} />
           ) : (
-            // ... (Form UI remains the same) ...
              <div className="max-w-2xl mx-auto space-y-6">
               <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
                 <div className="space-y-6">
@@ -357,7 +353,6 @@ export function BookView({
                         className="w-full p-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-[var(--color-text-primary)]"
                       />
                     </div>
-
                     <div>
                       <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2">
                         <Brain className="w-4 h-4 inline mr-2" />
@@ -432,7 +427,7 @@ export function BookView({
       </div>
     );
   }
-
+  
   if (view === 'detail' && currentBook) {
     return (
       <div className="flex-1 flex flex-col h-full">
@@ -486,8 +481,7 @@ export function BookView({
               <BookAnalytics book={currentBook} />
             ) : (
               <div className="space-y-6">
-                {/* ... (All existing detail view content: Book Info, Progress, Roadmap, Error, Preview) ... */}
-                 <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
+                <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                     {selectedLanguage === 'en' ? 'Book Details' : 'पुस्तकाचे तपशील'}
                   </h3>
@@ -617,6 +611,5 @@ export function BookView({
       </div>
     );
   }
-
   return null;
 }
