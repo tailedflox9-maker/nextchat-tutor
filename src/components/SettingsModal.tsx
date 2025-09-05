@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Settings, Key, Download, Upload, Shield, Database, Eye, EyeOff, HelpCircle, Trash2 } from 'lucide-react';
-import { APISettings } from '../types';
+import { X, Settings, Key, Download, Upload, Shield, Database, Eye, EyeOff, HelpCircle, Trash2, BookUser } from 'lucide-react';
+import { APISettings, TutorMode } from '../types';
 import { storageUtils } from '../utils/storage';
 
 interface SettingsModalProps {
@@ -16,12 +16,19 @@ const apiInfo = {
   mistral: { name: 'Mistral', url: 'https://console.mistral.ai/api-keys' },
 };
 
-type ActiveTab = 'keys' | 'data';
+const tutorModes = [
+    { id: 'standard', name: 'Standard Tutor', description: 'Neutral, explains clearly, step-by-step.', emoji: '📘' },
+    { id: 'exam', name: 'Exam Coach', description: 'Focus on practice questions & quick answers.', emoji: '🎓' },
+    { id: 'mentor', name: 'Friendly Mentor', description: 'Casual, motivating, makes analogies.', emoji: '🧑‍🏫' },
+    { id: 'creative', name: 'Creative Guide', description: 'Helps with essays, storytelling, ideas.', emoji: '✍️' },
+];
+
+type ActiveTab = 'general' | 'keys' | 'data';
 
 export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: SettingsModalProps) {
   const [localSettings, setLocalSettings] = useState<APISettings>(settings);
   const [visibleApis, setVisibleApis] = useState<Record<string, boolean>>({});
-  const [activeTab, setActiveTab] = useState<ActiveTab>('keys');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('general');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -35,13 +42,15 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
   const handleSave = () => {
     onSaveSettings(localSettings);
   };
+  
+  const handleTutorModeChange = (modeId: TutorMode) => {
+    setLocalSettings(prev => ({...prev, selectedTutorMode: modeId}));
+  };
 
   const handleExportData = () => {
-    const conversations = storageUtils.getConversations();
-    const notes = storageUtils.getNotes();
     const data = {
-      conversations,
-      notes,
+      conversations: storageUtils.getConversations(),
+      notes: storageUtils.getNotes(),
       settings: storageUtils.getSettings(),
       exportDate: new Date().toISOString(),
     };
@@ -110,7 +119,7 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-md bg-[var(--color-sidebar)] border border-[var(--color-border)] rounded-lg shadow-2xl flex flex-col animate-fade-in-up">
+      <div className="relative w-full max-w-lg bg-[var(--color-sidebar)] border border-[var(--color-border)] rounded-lg shadow-2xl flex flex-col animate-fade-in-up">
         {/* Header */}
         <div className="p-6 flex items-center justify-between border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
@@ -123,13 +132,34 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
         </div>
 
         {/* Tabs */}
-        <div className="p-3 grid grid-cols-2 gap-2 border-b border-[var(--color-border)]">
+        <div className="p-3 grid grid-cols-3 gap-2 border-b border-[var(--color-border)]">
+          <TabButton id="general" label="General" Icon={BookUser} />
           <TabButton id="keys" label="API Keys" Icon={Shield} />
           <TabButton id="data" label="Data" Icon={Database} />
         </div>
-
+        
         {/* Content */}
-        <div className="p-6 min-h-[20rem]">
+        <div className="p-6 min-h-[24rem] max-h-[60vh] overflow-y-auto">
+          {activeTab === 'general' && (
+            <div className="space-y-6 animate-fadeIn">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                Tutor Mode
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {tutorModes.map(mode => (
+                  <button
+                    key={mode.id}
+                    onClick={() => handleTutorModeChange(mode.id as TutorMode)}
+                    className={`p-4 border rounded-lg text-left transition-all duration-200 ${localSettings.selectedTutorMode === mode.id ? 'bg-[var(--color-card)] border-blue-500 ring-2 ring-blue-500/50' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)] hover:border-gray-600'}`}
+                  >
+                    <p className="text-lg">{mode.emoji} <span className="font-semibold">{mode.name}</span></p>
+                    <p className="text-sm text-[var(--color-text-secondary)] mt-1">{mode.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'keys' && (
             <div className="space-y-4 animate-fadeIn">
               {Object.keys(apiInfo).map(key => {
@@ -173,7 +203,7 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
                   <input type="file" ref={fileInputRef} onChange={handleImportData} accept=".json" className="hidden"/>
                 </div>
               </div>
-              <div>
+               <div>
                 <h3 className="font-semibold mb-2 text-red-400">Danger Zone</h3>
                 <button onClick={handleClearData} className="w-full flex items-center justify-center gap-2 p-3 border border-red-500/30 bg-red-900/20 text-red-400 rounded-lg hover:bg-red-900/40 hover:text-red-300 transition-colors">
                   <Trash2 className="w-4 h-4" />
