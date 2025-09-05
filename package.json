@@ -12,6 +12,8 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "lucide-react": "^0.344.0",
+    "jspdf": "^2.5.1",
+    "marked": "^13.0.1", // <-- THIS LINE IS ADDED
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
