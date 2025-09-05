@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback, useContext, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Smile, Sparkles, Copy, Check, Edit2, RefreshCcw, Save, X, Bookmark, Download } from 'lucide-react';
 import { Message } from '../types';
-import { LanguageContext } from '../contexts/LanguageContext';
 
 interface MessageBubbleProps {
   message: Message;
@@ -17,25 +16,17 @@ interface MessageBubbleProps {
 }
 
 const modelNames = {
-  google: { en: "Gemma", mr: "जेम्मा" },
-  zhipu: { en: "Zhipu", mr: "झिपू" },
-  'mistral-small': { en: "Misty", mr: "मिस्टी" },
-  'mistral-codestral': { en: "Cody", mr: "कोडी" },
+  google: "Gemma",
+  zhipu: "Zhipu",
+  'mistral-small': "Misty",
+  'mistral-codestral': "Cody",
 };
 
 // Memoized code block component to prevent unnecessary re-renders
-const CodeBlock = React.memo(({ 
-  language, 
-  children, 
-  selectedLanguage 
-}: { 
-  language: string; 
-  children: string; 
-  selectedLanguage: 'en' | 'mr'; 
-}) => {
+const CodeBlock = React.memo(({ language, children }: { language: string; children: string; }) => {
   const [copied, setCopied] = useState(false);
   const codeContent = String(children).replace(/\n$/, '');
-  
+
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(codeContent);
     setCopied(true);
@@ -51,7 +42,7 @@ const CodeBlock = React.memo(({
         <button
           onClick={handleCopy}
           className="interactive-button p-1.5 bg-gray-800 rounded hover:bg-gray-700 text-gray-300 transition-colors touch-target"
-          title={selectedLanguage === 'en' ? 'Copy code' : 'कोड कॉपी करा'}
+          title={'Copy code'}
         >
           {copied ? (
             <Check className="w-3 h-3" />
@@ -80,17 +71,7 @@ const StreamingIndicator = React.memo(() => (
 ));
 
 // Memoized action buttons to prevent unnecessary re-renders
-const ActionButtons = React.memo(({ 
-  isUser,
-  onRegenerate,
-  onEdit,
-  onCopy,
-  onSaveNote,
-  onExport,
-  copied,
-  noteSaved,
-  selectedLanguage 
-}: {
+const ActionButtons = React.memo(({ isUser, onRegenerate, onEdit, onCopy, onSaveNote, onExport, copied, noteSaved }: {
   isUser: boolean;
   onRegenerate?: () => void;
   onEdit: () => void;
@@ -99,7 +80,6 @@ const ActionButtons = React.memo(({
   onExport: () => void;
   copied: boolean;
   noteSaved: boolean;
-  selectedLanguage: 'en' | 'mr';
 }) => (
   <div className="absolute -bottom-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200">
     <div className="flex gap-1 p-1 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg shadow-sm">
@@ -107,7 +87,7 @@ const ActionButtons = React.memo(({
         <button
           onClick={onRegenerate}
           className="interactive-button text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)] touch-target"
-          title={selectedLanguage === 'en' ? 'Regenerate response' : 'प्रतिसाद पुन्हा तयार करा'}
+          title={'Regenerate response'}
         >
           <RefreshCcw className="w-4 h-4" />
         </button>
@@ -116,7 +96,7 @@ const ActionButtons = React.memo(({
         <button
           onClick={onSaveNote}
           className={`interactive-button transition-colors p-1 rounded hover:bg-[var(--color-border)] touch-target ${noteSaved ? 'text-blue-400' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
-          title={selectedLanguage === 'en' ? 'Save as Note' : 'टीप म्हणून जतन करा'}
+          title={'Save as Note'}
         >
           <Bookmark className="w-4 h-4" />
         </button>
@@ -124,14 +104,14 @@ const ActionButtons = React.memo(({
       <button
         onClick={onEdit}
         className="interactive-button text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)] touch-target"
-        title={selectedLanguage === 'en' ? 'Edit message' : 'संदेश संपादित करा'}
+        title={'Edit message'}
       >
         <Edit2 className="w-4 h-4" />
       </button>
       <button
         onClick={onCopy}
         className="interactive-button text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)] touch-target"
-        title={selectedLanguage === 'en' ? 'Copy message' : 'संदेश कॉपी करा'}
+        title={'Copy message'}
       >
         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
       </button>
@@ -139,7 +119,7 @@ const ActionButtons = React.memo(({
         <button
           onClick={onExport}
           className="interactive-button text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-border)] touch-target"
-          title={selectedLanguage === 'en' ? 'Export as Markdown' : 'मार्कडाउन म्हणून निर्यात करा'}
+          title={'Export as Markdown'}
         >
           <Download className="w-4 h-4" />
         </button>
@@ -156,7 +136,6 @@ export function MessageBubble({
   onRegenerateResponse,
   onSaveAsNote,
 }: MessageBubbleProps) {
-  const { selectedLanguage } = useContext(LanguageContext);
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
@@ -166,9 +145,9 @@ export function MessageBubble({
   const copyTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Memoize display model to prevent unnecessary recalculations
-  const displayModel = useMemo(() => 
-    isUser ? undefined : modelNames[message.model || model || 'google'][selectedLanguage],
-    [isUser, message.model, model, selectedLanguage]
+  const displayModel = useMemo(() =>
+    isUser ? undefined : modelNames[message.model || model || 'google'],
+    [isUser, message.model, model]
   );
 
   const handleCopy = useCallback(async () => {
@@ -183,7 +162,7 @@ export function MessageBubble({
       console.error('Failed to copy text:', error);
     }
   }, [message.content]);
-  
+
   const handleSaveNote = useCallback(() => {
     if (onSaveAsNote) {
       onSaveAsNote(message.content);
@@ -262,7 +241,6 @@ export function MessageBubble({
           <CodeBlock
             language={match[1]}
             children={String(children)}
-            selectedLanguage={selectedLanguage}
           />
         );
       } else {
@@ -292,7 +270,7 @@ export function MessageBubble({
     td({ children }: any) {
       return <td className="border border-[var(--color-border)] p-2">{children}</td>;
     },
-  }), [selectedLanguage]);
+  }), []);
 
   return (
     <div
@@ -303,14 +281,14 @@ export function MessageBubble({
           <Sparkles className="w-4 h-4 text-[var(--color-text-secondary)]" />
         </div>
       )}
-      
+
       <div className="message-bubble relative bg-[var(--color-card)] p-3 sm:p-4 rounded-xl min-h-[3rem] flex flex-col">
         {!isUser && displayModel && (
           <div className="text-xs text-[var(--color-text-secondary)] mb-2 font-medium tracking-wide">
             {displayModel}
           </div>
         )}
-        
+
         {isEditing ? (
           <div className="space-y-3">
             <textarea
@@ -319,7 +297,7 @@ export function MessageBubble({
               onChange={(e) => setEditContent(e.target.value)}
               onKeyDown={handleKeyDown}
               className="w-full min-w-72 min-h-[120px] p-3 border border-[var(--color-border)] rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-bg)] text-[var(--color-text-primary)] font-normal"
-              placeholder={selectedLanguage === 'en' ? 'Edit your message...' : 'आपला संदेश संपादित करा...'}
+              placeholder={'Edit your message...'}
             />
             <div className="flex gap-2 justify-end">
               <button
@@ -327,7 +305,7 @@ export function MessageBubble({
                 className="interactive-button flex items-center gap-1 px-3 py-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors text-sm touch-target"
               >
                 <X className="w-3 h-3" />
-                {selectedLanguage === 'en' ? 'Cancel' : 'रद्द करा'}
+                Cancel
               </button>
               <button
                 onClick={handleSaveEdit}
@@ -335,13 +313,11 @@ export function MessageBubble({
                 disabled={editContent.trim() === message.content || !editContent.trim()}
               >
                 <Save className="w-3 h-3" />
-                {selectedLanguage === 'en' ? 'Save' : 'जतन करा'}
+                Save
               </button>
             </div>
             <p className="text-xs text-[var(--color-text-placeholder)]">
-              {selectedLanguage === 'en'
-                ? 'Press Ctrl+Enter to save, Escape to cancel'
-                : 'जतन करण्यासाठी Ctrl+Enter दाबा, रद्द करण्यासाठी Escape दाबा'}
+              Press Ctrl+Enter to save, Escape to cancel
             </p>
           </div>
         ) : (
@@ -355,7 +331,7 @@ export function MessageBubble({
             {isStreaming && <StreamingIndicator />}
           </div>
         )}
-        
+
         {!isEditing && !isStreaming && message.content.length > 0 && onEditMessage && (
           <ActionButtons
             isUser={isUser}
@@ -366,11 +342,10 @@ export function MessageBubble({
             onExport={handleExport}
             copied={copied}
             noteSaved={noteSaved}
-            selectedLanguage={selectedLanguage}
           />
         )}
       </div>
-      
+
       {isUser && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-card)]">
           <Smile className="w-4 h-4 text-[var(--color-text-secondary)]" />
