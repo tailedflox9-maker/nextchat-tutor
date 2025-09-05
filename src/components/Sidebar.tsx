@@ -20,8 +20,8 @@ interface SidebarProps {
   onNewConversation: () => void;
   onNewPersonaConversation: (systemPrompt: string) => void;
   onSelectConversation: (id: string) => void;
-  onSelectNote: (id: string) => void;
-  onSelectBook: (id: string) => void;
+  onSelectNote: (id: string | null) => void;      // CHANGED: Accepts null
+  onSelectBook: (id: string | null) => void;        // CHANGED: Accepts null
   onDeleteConversation: (id: string) => void;
   onRenameConversation: (id: string, newTitle: string) => void;
   onTogglePinConversation: (id: string) => void;
@@ -148,6 +148,7 @@ export function Sidebar({
 
   return (
     <aside className={sidebarClasses}>
+      {/* ... Header and Model Selection ... */}
       <div className="p-2 border-b border-[var(--color-border)] flex flex-col gap-2">
         <div className="flex items-center justify-between">
           {!isFolded && (
@@ -196,7 +197,6 @@ export function Sidebar({
           )}
         </button>
       </div>
-
       <div className="p-2">
         {isFolded ? (
           <div className="space-y-2">
@@ -242,6 +242,7 @@ export function Sidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 border-t border-[var(--color-border)] mt-2 flex flex-col">
+        {/* ... (Search Bar) ... */}
         {(view === 'chats' || view === 'notes' || view === 'books') && !isFolded && (
           <div className="relative mb-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" />
@@ -254,6 +255,7 @@ export function Sidebar({
             />
           </div>
         )}
+        {/* ... (Lists for Chats, Notes, Books, Personas) ... */}
         {view === 'chats' && (
           <div className="space-y-1">
             {filteredConversations.length > 0 ? (
@@ -463,7 +465,7 @@ export function Sidebar({
           </div>
         )}
         {view === 'personas' && !isFolded && (
-          <div className="p-2 flex flex-col h-full">
+           <div className="p-2 flex flex-col h-full">
             <h3 className="text-base font-semibold mb-2">
               {selectedLanguage === 'en' ? 'Create a Persona' : 'एक Persona तयार करा'}
             </h3>
@@ -519,7 +521,7 @@ export function Sidebar({
             {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Personas' : 'Personas'}</span>}
           </button>
           <button
-            onClick={() => setView('notes')}
+            onClick={() => { setView('notes'); onSelectNote(null); }} // THE FIX
             className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${
               view === 'notes' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
             }`}
@@ -528,7 +530,7 @@ export function Sidebar({
             {!isFolded && <span className="text-xs font-semibold">{selectedLanguage === 'en' ? 'Notes' : 'नोट्स'}</span>}
           </button>
           <button
-            onClick={() => setView('books')}
+            onClick={() => { setView('books'); onSelectBook(null); }} // THE FIX
             className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${
               view === 'books' ? 'text-[var(--color-text-primary)] bg-[var(--color-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
             }`}
