@@ -11,11 +11,27 @@
    ========================================================================== */
 @layer base {
   ::selection {
-    background-color: #3B82F6;
-    color: #FFFFFF;
+    @apply bg-blue-500 text-white;
   }
 
   :root {
+    /* Light Theme (Default) */
+    --color-bg: #F9FAFB; /* gray-50 */
+    --color-sidebar: #FFFFFF;
+    --color-card: #FFFFFF;
+    --color-border: #E5E7EB; /* gray-200 */
+    --color-text-primary: #1F2937; /* gray-800 */
+    --color-text-secondary: #6B7280; /* gray-500 */
+    --color-text-placeholder: #9CA3AF; /* gray-400 */
+    --color-accent-bg: #3B82F6; /* blue-500 */
+    --color-accent-text: #FFFFFF;
+    --color-accent-bg-hover: #2563EB; /* blue-600 */
+    --font-weight: 500;
+    --font-english: 'Inter', sans-serif;
+  }
+  
+  .dark {
+    /* Dark Theme */
     --color-bg: #0A0A0A;
     --color-sidebar: #141414;
     --color-card: #1F1F1F;
@@ -26,8 +42,6 @@
     --color-accent-bg: #FFFFFF;
     --color-accent-text: #0A0A0A;
     --color-accent-bg-hover: #F0F0F0;
-    --font-weight: 500;
-    --font-english: 'Inter', sans-serif;
   }
 
   * {
