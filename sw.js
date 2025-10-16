@@ -3,6 +3,7 @@ const urlsToCache = [
   '/',
   '/index.html',
   '/white-logo.png',
+  '/black-logo.png', // Add black logo to the cache
   '/manifest.json',
   // Add other static assets as needed
 ];
@@ -95,7 +96,7 @@ self.addEventListener('push', event => {
   if (event.data) {
     const options = {
       body: event.data.text(),
-      icon: '/white-logo.png',
+      icon: '/white-logo.png', // Note: Push notification icons are harder to make dynamic
       badge: '/white-logo.png',
       vibrate: [100, 50, 100],
       data: {
