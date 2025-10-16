@@ -4,7 +4,9 @@ import {
   Sparkles, Brain, Cloud, Terminal, Search, Pin, Edit, Book
 } from 'lucide-react';
 import { Conversation, Note } from '../types';
+import { useTheme } from '../context/ThemeContext'; // Import the useTheme hook
 
+// ... (interface props remain the same)
 interface SidebarProps {
   conversations: Conversation[];
   notes: Note[];
@@ -27,6 +29,7 @@ interface SidebarProps {
   onToggleFold?: () => void;
 }
 
+
 export function Sidebar({
   conversations,
   notes,
@@ -48,6 +51,7 @@ export function Sidebar({
   onToggleFold,
   isSidebarOpen
 }: SidebarProps) {
+  const { logoSrc } = useTheme(); // Get logoSrc from context
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
@@ -106,12 +110,14 @@ export function Sidebar({
         <div className="flex items-center justify-between">
           {!isFolded && (
             <a href="https://www.linkedin.com/in/tanmay-kalbande/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group px-2">
-              <img src="/white-logo.png" alt="Logo" className="w-7 h-7" />
+              {/* Use dynamic logoSrc */}
+              <img src={logoSrc} alt="Logo" className="w-7 h-7" />
               <h1 className="text-xl font-bold text-[var(--color-text-primary)] group-hover:text-gray-500 dark:group-hover:text-gray-300 transition-colors">
                 AI Tutor
               </h1>
             </a>
           )}
+          {/* ... rest of the component is unchanged */}
           <div className="flex items-center gap-1">
             <button
               onClick={onOpenSettings}
