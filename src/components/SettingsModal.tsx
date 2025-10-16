@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Settings, Key, Download, Upload, Shield, Database, Eye, EyeOff, HelpCircle, Trash2, BookUser } from 'lucide-react';
+import { X, Settings, Key, Download, Upload, Shield, Database, Eye, EyeOff, HelpCircle, Trash2, BookUser, Sun, Moon, Monitor } from 'lucide-react';
 import { APISettings, TutorMode } from '../types';
 import { storageUtils } from '../utils/storage';
 
@@ -21,6 +21,12 @@ const tutorModes = [
     { id: 'exam', name: 'Exam Coach', description: 'Focus on practice questions & quick answers.', emoji: '🎓' },
     { id: 'mentor', name: 'Friendly Mentor', description: 'Casual, motivating, makes analogies.', emoji: '🧑‍🏫' },
     { id: 'creative', name: 'Creative Guide', description: 'Helps with essays, storytelling, ideas.', emoji: '✍️' },
+];
+
+const themeOptions = [
+    { id: 'light', name: 'Light', icon: Sun },
+    { id: 'dark', name: 'Dark', icon: Moon },
+    { id: 'system', name: 'System', icon: Monitor },
 ];
 
 type ActiveTab = 'general' | 'keys' | 'data';
@@ -45,6 +51,10 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
   
   const handleTutorModeChange = (modeId: TutorMode) => {
     setLocalSettings(prev => ({...prev, selectedTutorMode: modeId}));
+  };
+
+  const handleThemeChange = (theme: 'light' | 'dark' | 'system') => {
+    setLocalSettings(prev => ({...prev, theme: theme }));
   };
 
   const handleExportData = () => {
@@ -114,7 +124,7 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
@@ -141,21 +151,41 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
         {/* Content */}
         <div className="p-6 min-h-[24rem] max-h-[60vh] overflow-y-auto">
           {activeTab === 'general' && (
-            <div className="space-y-6 animate-fadeIn">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                Tutor Mode
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {tutorModes.map(mode => (
-                  <button
-                    key={mode.id}
-                    onClick={() => handleTutorModeChange(mode.id as TutorMode)}
-                    className={`p-4 border rounded-lg text-left transition-all duration-200 ${localSettings.selectedTutorMode === mode.id ? 'bg-[var(--color-card)] border-blue-500 ring-2 ring-blue-500/50' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)] hover:border-gray-600'}`}
-                  >
-                    <p className="text-lg">{mode.emoji} <span className="font-semibold">{mode.name}</span></p>
-                    <p className="text-sm text-[var(--color-text-secondary)] mt-1">{mode.description}</p>
-                  </button>
-                ))}
+            <div className="space-y-8 animate-fadeIn">
+              <div>
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3">
+                  Theme
+                </h3>
+                <div className="grid grid-cols-3 gap-3">
+                    {themeOptions.map(option => (
+                        <button
+                            key={option.id}
+                            onClick={() => handleThemeChange(option.id as any)}
+                            className={`flex flex-col items-center justify-center gap-2 p-4 border rounded-lg transition-all duration-200 ${localSettings.theme === option.id ? 'bg-[var(--color-card)] border-blue-500 ring-2 ring-blue-500/50' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)] hover:border-gray-500'}`}
+                        >
+                            <option.icon className="w-5 h-5" />
+                            <span className="text-sm font-semibold">{option.name}</span>
+                        </button>
+                    ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                  Tutor Mode
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  {tutorModes.map(mode => (
+                    <button
+                      key={mode.id}
+                      onClick={() => handleTutorModeChange(mode.id as TutorMode)}
+                      className={`p-4 border rounded-lg text-left transition-all duration-200 ${localSettings.selectedTutorMode === mode.id ? 'bg-[var(--color-card)] border-blue-500 ring-2 ring-blue-500/50' : 'bg-transparent border-[var(--color-border)] hover:bg-[var(--color-card)] hover:border-gray-500'}`}
+                    >
+                      <p className="text-lg">{mode.emoji} <span className="font-semibold">{mode.name}</span></p>
+                      <p className="text-sm text-[var(--color-text-secondary)] mt-1">{mode.description}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -181,7 +211,7 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
                         value={localSettings[apiKeyId]}
                         onChange={(e) => setLocalSettings(prev => ({ ...prev, [apiKeyId]: e.target.value }))}
                         placeholder={`${apiInfo[id].name} key`}
-                        className="w-full pl-9 pr-10 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-card)] focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-colors"
+                        className="w-full pl-9 pr-10 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-card)] focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       />
                       <button type="button" onClick={() => toggleApiVisibility(id)} className="absolute top-1/2 right-3 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
                         {visibleApis[id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -204,8 +234,8 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
                 </div>
               </div>
                <div>
-                <h3 className="font-semibold mb-2 text-red-400">Danger Zone</h3>
-                <button onClick={handleClearData} className="w-full flex items-center justify-center gap-2 p-3 border border-red-500/30 bg-red-900/20 text-red-400 rounded-lg hover:bg-red-900/40 hover:text-red-300 transition-colors">
+                <h3 className="font-semibold mb-2 text-red-500 dark:text-red-400">Danger Zone</h3>
+                <button onClick={handleClearData} className="w-full flex items-center justify-center gap-2 p-3 border border-red-500/30 bg-red-100 text-red-600 rounded-lg hover:bg-red-200/70 hover:text-red-700 transition-colors dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 dark:hover:text-red-300">
                   <Trash2 className="w-4 h-4" />
                   Clear All Data
                 </button>
@@ -215,7 +245,7 @@ export function SettingsModal({ isOpen, onClose, settings, onSaveSettings }: Set
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-4 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
+        <div className="flex justify-end gap-3 p-4 border-t border-[var(--color-border)] bg-gray-50 dark:bg-[var(--color-bg)]">
           <button onClick={onClose} className="px-6 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-card)] rounded-lg transition-colors font-semibold">
             Cancel
           </button>
