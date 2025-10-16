@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Smile, Sparkles, Copy, Check, Edit2, RefreshCcw, Save, X, Bookmark, Download } from 'lucide-react';
 import { Message } from '../types';
 
@@ -22,7 +22,7 @@ const modelNames = {
 };
 
 // Memoized code block component to prevent unnecessary re-renders
-const CodeBlock = React.memo(({ language, children }: { language: string; children: string; }) => {
+const CodeBlock = React.memo(({ language, children, isDarkMode }: { language: string; children: string; isDarkMode: boolean }) => {
   const [copied, setCopied] = useState(false);
   const codeContent = String(children).replace(/\n$/, '');
   
@@ -35,12 +35,12 @@ const CodeBlock = React.memo(({ language, children }: { language: string; childr
   return (
     <div className="relative my-2 text-sm will-change-transform">
       <div className="absolute right-2 top-2 flex items-center gap-2 z-10">
-        <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">
+        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded">
           {language}
         </span>
         <button
           onClick={handleCopy}
-          className="interactive-button p-1.5 bg-gray-800 rounded hover:bg-gray-700 text-gray-300 transition-colors touch-target"
+          className="interactive-button p-1.5 bg-gray-200 dark:bg-gray-800 rounded hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors touch-target"
           title={'Copy code'}
         >
           {copied ? (
@@ -51,10 +51,10 @@ const CodeBlock = React.memo(({ language, children }: { language: string; childr
         </button>
       </div>
       <SyntaxHighlighter
-        style={vscDarkPlus}
+        style={isDarkMode ? vscDarkPlus : oneLight}
         language={language}
         PreTag="div"
-        className="!bg-[#121212] rounded-md !p-4 !pt-8"
+        className="rounded-md !p-4 !pt-8"
       >
         {codeContent}
       </SyntaxHighlighter>
@@ -141,6 +141,21 @@ export function MessageBubble({
   const [isEditing, setIsEditing] = useState(message.isEditing || false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const copyTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // New: State to track theme for syntax highlighter
+  const [isDarkMode, setIsDarkMode] = useState(
+    () => document.documentElement.classList.contains('dark')
+  );
+
+  useEffect(() => {
+    // This effect ensures the syntax highlighter theme updates
+    // when the app's theme changes.
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   // Memoize display model to prevent unnecessary recalculations
   const displayModel = useMemo(() => {
@@ -239,11 +254,12 @@ export function MessageBubble({
           <CodeBlock
             language={match[1]}
             children={String(children)}
+            isDarkMode={isDarkMode}
           />
         );
       } else {
         return (
-          <code className="bg-[var(--color-bg)] px-1.5 py-0.5 rounded text-sm" {...props}>
+          <code className="bg-gray-100 dark:bg-[var(--color-bg)] px-1.5 py-0.5 rounded text-sm" {...props}>
             {children}
           </code>
         );
@@ -260,7 +276,7 @@ export function MessageBubble({
     },
     th({ children }: any) {
       return (
-        <th className="border border-[var(--color-border)] p-2 bg-[var(--color-sidebar)] font-semibold">
+        <th className="border border-[var(--color-border)] p-2 bg-gray-50 dark:bg-[var(--color-sidebar)] font-semibold">
           {children}
         </th>
       );
@@ -268,7 +284,7 @@ export function MessageBubble({
     td({ children }: any) {
       return <td className="border border-[var(--color-border)] p-2">{children}</td>;
     },
-  }), []);
+  }), [isDarkMode]);
 
   return (
     <div
@@ -319,7 +335,7 @@ export function MessageBubble({
             </p>
           </div>
         ) : (
-          <div className={`prose prose-invert prose-base max-w-none leading-relaxed flex-1 ${isUser ? 'font-semibold' : 'font-normal'}`}>
+          <div className={`prose dark:prose-invert prose-base max-w-none leading-relaxed flex-1 ${isUser ? 'font-semibold' : 'font-normal'}`}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={markdownComponents}
