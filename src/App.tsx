@@ -11,6 +11,7 @@ import { usePWA } from './hooks/usePWA';
 import { Menu } from 'lucide-react';
 import { storageUtils } from './utils/storage';
 import { aiService } from './services/aiService';
+import { ThemeProvider } from './context/ThemeContext'; // Import ThemeProvider
 
 type ActiveView = 'chat' | 'note';
 
@@ -24,6 +25,9 @@ function App() {
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
   const [sidebarFolded, setSidebarFolded] = useState(() => JSON.parse(localStorage.getItem('ai-tutor-sidebar-folded') || 'false'));
   
+  // New state for theme context
+  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light');
+
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isQuizLoading, setIsQuizLoading] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
@@ -69,7 +73,7 @@ function App() {
   useEffect(() => { storageUtils.saveNotes(notes); }, [notes]);
   useEffect(() => { localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded)); }, [sidebarFolded]);
 
-  // New: Effect to manage theme switching
+  // Effect to manage theme switching and dynamic assets
   useEffect(() => {
     const root = window.document.documentElement;
     const isDark =
@@ -77,22 +81,45 @@ function App() {
       (settings.theme === 'system' &&
         window.matchMedia('(prefers-color-scheme: dark)').matches);
     
+    const newTheme = isDark ? 'dark' : 'light';
+    setEffectiveTheme(newTheme);
     root.classList.toggle('dark', isDark);
 
+    // Update favicon and theme-color meta tag
+    const favicon = document.getElementById('favicon') as HTMLLinkElement | null;
+    const themeColorMeta = document.getElementById('theme-color-meta') as HTMLMetaElement | null;
+
+    if (favicon) {
+      favicon.href = isDark ? '/white-logo.png' : '/black-logo.png';
+    }
+    if (themeColorMeta) {
+      themeColorMeta.content = isDark ? '#141414' : '#FFFFFF';
+    }
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
+    const handleChange = (e: MediaQueryListEvent) => {
       if (settings.theme === 'system') {
-        root.classList.toggle('dark', mediaQuery.matches);
+        const systemIsDark = e.matches;
+        root.classList.toggle('dark', systemIsDark);
+        setEffectiveTheme(systemIsDark ? 'dark' : 'light');
+         if (favicon) {
+          favicon.href = systemIsDark ? '/white-logo.png' : '/black-logo.png';
+        }
+        if (themeColorMeta) {
+          themeColorMeta.content = systemIsDark ? '#141414' : '#FFFFFF';
+        }
       }
     };
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [settings.theme]);
 
+
   // --- MEMOS ---
   const currentConversation = useMemo(() => conversations.find(c => c.id === currentConversationId), [conversations, currentConversationId]);
   const currentNote = useMemo(() => notes.find(n => n.id === currentNoteId), [notes, currentNoteId]);
   const hasApiKey = !!(settings.googleApiKey || settings.zhipuApiKey || settings.mistralApiKey);
+  const logoSrc = useMemo(() => (effectiveTheme === 'dark' ? '/white-logo.png' : '/black-logo.png'), [effectiveTheme]);
   
   // --- GENERAL HANDLERS ---
   const handleSelectConversation = (id: string) => {
@@ -108,7 +135,8 @@ function App() {
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
-  // --- CHAT HANDLERS ---
+  // --- CHAT HANDLERS (no changes) ...
+
   const handleNewConversation = () => {
     const newConversation: Conversation = {
       id: generateId(), 
@@ -280,8 +308,9 @@ function App() {
     }
   };
   
-  // --- NOTE & QUIZ HANDLERS ---
-  const handleSaveAsNote = (content: string) => {
+  // --- NOTE & QUIZ HANDLERS (no changes) ...
+
+    const handleSaveAsNote = (content: string) => {
     if (!currentConversationId) return;
     const newNote: Note = {
       id: generateId(), 
@@ -319,7 +348,7 @@ function App() {
       setIsQuizLoading(false);
     }
   };
-  
+
   // --- OTHER HANDLERS ---
   const handleModelChange = (model: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral') => {
     const newSettings = { ...settings, selectedModel: model };
@@ -335,73 +364,75 @@ function App() {
   const sortedNotes = useMemo(() => [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), [notes]);
 
   return (
-    <div className="app-container">
-      {sidebarOpen && window.innerWidth < 1024 && (
-        <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
-      )}
-      <Sidebar
-        conversations={sortedConversations}
-        notes={sortedNotes}
-        activeView={activeView}
-        currentConversationId={currentConversationId}
-        currentNoteId={currentNoteId}
-        onNewConversation={handleNewConversation}
-        onSelectConversation={handleSelectConversation}
-        onSelectNote={handleSelectNote}
-        onDeleteConversation={handleDeleteConversation}
-        onRenameConversation={handleRenameConversation}
-        onTogglePinConversation={handleTogglePinConversation}
-        onDeleteNote={handleDeleteNote}
-        onOpenSettings={() => setSettingsOpen(true)}
-        settings={settings}
-        onModelChange={handleModelChange}
-        onCloseSidebar={() => setSidebarOpen(false)}
-        isFolded={sidebarFolded}
-        onToggleFold={() => setSidebarFolded(!sidebarFolded)}
-        isSidebarOpen={sidebarOpen}
-      />
-      <div className="main-content">
-        {!sidebarOpen && (
-          <button 
-            onClick={() => setSidebarOpen(true)} 
-            className="mobile-menu-button interactive-button p-2.5 bg-[var(--color-card)] rounded-lg shadow-md hover:bg-[var(--color-border)] transition-colors lg:hidden" 
-            title="Open sidebar"
-            aria-label="Open sidebar"
-          >
-            <Menu className="w-6 h-6 text-[var(--color-text-secondary)]" />
-          </button>
+    <ThemeProvider value={{ theme: effectiveTheme, logoSrc }}>
+      <div className="app-container">
+        {sidebarOpen && window.innerWidth < 1024 && (
+          <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
         )}
-        {activeView === 'chat' ? (
-          <ChatArea
-            conversation={currentConversation}
-            onSendMessage={handleSendMessage}
-            isLoading={isChatLoading}
-            isQuizLoading={isQuizLoading}
-            streamingMessage={streamingMessage}
-            hasApiKey={hasApiKey}
-            onStopGenerating={handleStopGenerating}
-            onSaveAsNote={handleSaveAsNote}
-            onGenerateQuiz={handleGenerateQuiz}
-            onEditMessage={handleEditMessage}
-            onRegenerateResponse={handleRegenerateResponse}
-          />
-        ) : (
-          <NoteView note={currentNote} />
-        )}
+        <Sidebar
+          conversations={sortedConversations}
+          notes={sortedNotes}
+          activeView={activeView}
+          currentConversationId={currentConversationId}
+          currentNoteId={currentNoteId}
+          onNewConversation={handleNewConversation}
+          onSelectConversation={handleSelectConversation}
+          onSelectNote={handleSelectNote}
+          onDeleteConversation={handleDeleteConversation}
+          onRenameConversation={handleRenameConversation}
+          onTogglePinConversation={handleTogglePinConversation}
+          onDeleteNote={handleDeleteNote}
+          onOpenSettings={() => setSettingsOpen(true)}
+          settings={settings}
+          onModelChange={handleModelChange}
+          onCloseSidebar={() => setSidebarOpen(false)}
+          isFolded={sidebarFolded}
+          onToggleFold={() => setSidebarFolded(!sidebarFolded)}
+          isSidebarOpen={sidebarOpen}
+        />
+        <div className="main-content">
+          {!sidebarOpen && (
+            <button 
+              onClick={() => setSidebarOpen(true)} 
+              className="mobile-menu-button interactive-button p-2.5 bg-[var(--color-card)] rounded-lg shadow-md hover:bg-[var(--color-border)] transition-colors lg:hidden" 
+              title="Open sidebar"
+              aria-label="Open sidebar"
+            >
+              <Menu className="w-6 h-6 text-[var(--color-text-secondary)]" />
+            </button>
+          )}
+          {activeView === 'chat' ? (
+            <ChatArea
+              conversation={currentConversation}
+              onSendMessage={handleSendMessage}
+              isLoading={isChatLoading}
+              isQuizLoading={isQuizLoading}
+              streamingMessage={streamingMessage}
+              hasApiKey={hasApiKey}
+              onStopGenerating={handleStopGenerating}
+              onSaveAsNote={handleSaveAsNote}
+              onGenerateQuiz={handleGenerateQuiz}
+              onEditMessage={handleEditMessage}
+              onRegenerateResponse={handleRegenerateResponse}
+            />
+          ) : (
+            <NoteView note={currentNote} />
+          )}
+        </div>
+        <SettingsModal 
+          isOpen={settingsOpen} 
+          onClose={() => setSettingsOpen(false)} 
+          settings={settings} 
+          onSaveSettings={handleSaveSettings} 
+        />
+        <QuizModal 
+          isOpen={isQuizModalOpen} 
+          onClose={() => setIsQuizModalOpen(false)} 
+          session={studySession} 
+        />
+        {isInstallable && !isInstalled && ( <InstallPrompt onInstall={handleInstallApp} onDismiss={dismissInstallPrompt} /> )}
       </div>
-      <SettingsModal 
-        isOpen={settingsOpen} 
-        onClose={() => setSettingsOpen(false)} 
-        settings={settings} 
-        onSaveSettings={handleSaveSettings} 
-      />
-      <QuizModal 
-        isOpen={isQuizModalOpen} 
-        onClose={() => setIsQuizModalOpen(false)} 
-        session={studySession} 
-      />
-      {isInstallable && !isInstalled && ( <InstallPrompt onInstall={handleInstallApp} onDismiss={dismissInstallPrompt} /> )}
-    </div>
+    </ThemeProvider>
   );
 }
 
