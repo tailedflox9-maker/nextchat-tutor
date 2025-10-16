@@ -2,89 +2,88 @@
 import React, { useState, useMemo } from 'react';
 import {
   Settings, Trash2, X, ChevronLeft, ChevronRight, Search, Plus,
-  Book, Beaker, Palette, Building, Cpu, Check, AlertCircle, ChevronDown, User,
-  Sun, Moon
+  Book, Beaker, Palette, Building, Cpu, Wind, Brain, Check, AlertCircle, ChevronDown, User
 } from 'lucide-react';
-import { Conversation, Note, APISettings } from '../types';
+import { BookProject, APISettings, BookCategory, ModelProvider } from '../types';
 
 interface SidebarProps {
-  conversations: Conversation[];
-  notes: Note[];
-  activeView: 'chat' | 'note';
-  currentConversationId: string | null;
-  currentNoteId: string | null;
-  onNewConversation: () => void;
-  onSelectConversation: (id: string) => void;
-  onSelectNote: (id: string | null) => void;
-  onDeleteConversation: (id: string) => void;
-  onRenameConversation: (id: string, newTitle: string) => void;
-  onTogglePinConversation: (id: string) => void;
-  onDeleteNote: (id: string) => void;
+  books: BookProject[];
+  currentBookId: string | null;
+  onSelectBook: (id: string | null) => void;
+  onDeleteBook: (id: string) => void;
   onOpenSettings: () => void;
-  settings: APISettings;
-  onModelChange: (model: string) => void;
+  onNewBook: () => void;
   onCloseSidebar: () => void;
   isSidebarOpen: boolean;
   isFolded?: boolean;
   onToggleFold?: () => void;
+  settings: APISettings;
+  onModelChange: (model: string, provider: ModelProvider) => void;
 }
 
-// SVG Icons
+const getCategoryIcon = (category?: BookCategory) => {
+  switch (category) {
+    case 'programming': return Cpu;
+    case 'science': return Beaker;
+    case 'art': return Palette;
+    case 'business': return Building;
+    default: return Book;
+  }
+};
+
+// SVG Icons from public folder with white filter
 const GoogleIcon = () => (
-  <img src="/gemini.svg" alt="Google AI" className="w-4 h-4 filter brightness-0 invert dark:filter dark:brightness-0 dark:invert" />
+  <img src="/gemini.svg" alt="Google AI" className="w-4 h-4 filter brightness-0 invert" />
 );
 
 const MistralIcon = () => (
-  <img src="/mistral.svg" alt="Mistral AI" className="w-4 h-4 filter brightness-0 invert dark:filter dark:brightness-0 dark:invert" />
+  <img src="/mistral.svg" alt="Mistral AI" className="w-4 h-4 filter brightness-0 invert" />
 );
 
 const ZhipuIcon = () => (
-  <img src="/zhipu.svg" alt="ZhipuAI" className="w-4 h-4 filter brightness-0 invert dark:filter dark:brightness-0 dark:invert" />
+  <img src="/zhipu.svg" alt="ZhipuAI" className="w-4 h-4 filter brightness-0 invert" />
 );
 
-// Model configuration
+// Enhanced model configuration with all models
 const modelConfig = {
   google: {
     name: "Google AI",
     icon: GoogleIcon,
     models: [
-      { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', description: 'Fast, lightweight' },
-      { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', description: 'Enhanced lightweight' },
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', description: 'Balanced speed' },
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Latest flash' },
-      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Previous generation' },
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most capable' },
+      { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', description: 'Fast, lightweight model' },
+      { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', description: 'Enhanced lightweight model' },
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', description: 'Balanced speed and capability' },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Latest flash model' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Previous generation flash' },
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most capable model' },
     ]
   },
   mistral: {
     name: "Mistral AI",
     icon: MistralIcon,
     models: [
-      { id: 'mistral-small', name: 'Mistral Small', description: 'Cost-effective' },
-      { id: 'mistral-codestral', name: 'Codestral', description: 'Code specialist' },
+      { id: 'open-mistral-7b', name: 'Open Mistral 7B', description: 'Open source 7B model' },
+      { id: 'open-mixtral-8x7b', name: 'Open Mixtral 8x7B', description: 'Mixture of experts model' },
+      { id: 'mistral-small-latest', name: 'Mistral Small', description: 'Cost-effective model' },
+      { id: 'mistral-large-latest', name: 'Mistral Large', description: 'Most powerful model' },
     ]
   },
   zhipu: {
     name: "ZhipuAI",
     icon: ZhipuIcon,
     models: [
-      { id: 'glm-4', name: 'GLM-4', description: 'Chinese AI model' },
+      { id: 'glm-4.5-flash', name: 'GLM 4.5 Flash', description: 'Chinese AI model' },
     ]
   }
 };
 
 export function Sidebar({
-  conversations,
-  notes,
-  activeView,
-  currentConversationId,
-  currentNoteId,
-  onNewConversation,
-  onSelectConversation,
-  onSelectNote,
-  onDeleteConversation,
-  onDeleteNote,
+  books,
+  currentBookId,
+  onSelectBook,
+  onDeleteBook,
   onOpenSettings,
+  onNewBook,
   onCloseSidebar,
   isFolded = false,
   onToggleFold,
@@ -94,37 +93,15 @@ export function Sidebar({
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('app-theme');
-    return (saved as 'light' | 'dark') || 'dark';
-  });
   
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    localStorage.setItem('app-theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-  };
-
-  // Initialize theme on mount
-  React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, []);
-
-  const sortedConversations = useMemo(() => {
-    const filtered = conversations.filter(conv =>
-      conv.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const sortedBooks = useMemo(() => {
+    const filtered = books.filter(book =>
+      book.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    return filtered;
-  }, [conversations, searchQuery]);
+    return filtered.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }, [books, searchQuery]);
 
-  const sortedNotes = useMemo(() => {
-    return notes.filter(note =>
-      note.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [notes, searchQuery]);
-
-  const hasApiKeyForProvider = (provider: keyof typeof modelConfig): boolean => {
+  const hasApiKeyForProvider = (provider: ModelProvider): boolean => {
     switch (provider) {
       case 'google': return !!settings.googleApiKey;
       case 'mistral': return !!settings.mistralApiKey;
@@ -134,30 +111,21 @@ export function Sidebar({
   };
 
   const getCurrentModelInfo = () => {
-    // Determine provider from selected model
-    let provider: keyof typeof modelConfig | null = null;
-    let model = null;
-
-    for (const [key, config] of Object.entries(modelConfig)) {
-      const found = config.models.find(m => m.id === settings.selectedModel);
-      if (found) {
-        provider = key as keyof typeof modelConfig;
-        model = found;
-        break;
-      }
-    }
-
-    return { provider: provider ? modelConfig[provider] : null, model };
+    const provider = modelConfig[settings.selectedProvider];
+    const model = provider?.models.find(m => m.id === settings.selectedModel);
+    return { provider, model };
   };
 
   const { provider: currentProvider, model: currentModel } = getCurrentModelInfo();
 
+  // Enhanced sidebar classes with smooth transitions
   const sidebarClasses = `sidebar transition-all duration-300 ease-in-out ${
     isSidebarOpen ? 'sidebar-open translate-x-0' : 'hidden lg:flex -translate-x-full lg:translate-x-0'
   } ${isFolded ? 'sidebar-folded w-14' : 'w-64'}`;
 
   return (
     <div className="relative">
+      {/* Overlay for mobile */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 ease-in-out"
@@ -173,6 +141,7 @@ export function Sidebar({
           <div className={`flex items-center transition-all duration-300 ease-in-out ${
             isFolded ? 'justify-center flex-col gap-2' : 'justify-between'
           }`}>
+            {/* Logo Section */}
             <a href="/" className={`flex items-center group transition-all duration-300 ease-in-out ${
               isFolded ? 'flex-col gap-1 px-2 py-1' : 'gap-2 px-1'
             }`}>
@@ -186,25 +155,26 @@ export function Sidebar({
               }`}>
                 {!isFolded && (
                   <div>
-                    <h1 className="text-lg font-bold">AI Tutor</h1>
-                    <p className="text-xs text-[var(--color-text-secondary)] -mt-1">Learn Smarter</p>
+                    <h1 className="text-lg font-bold">Pustakam</h1>
+                    <p className="text-xs text-gray-500 -mt-1">injin</p>
                   </div>
                 )}
               </div>
               {isFolded && (
                 <div className="text-center">
-                  <h1 className="text-xs font-bold leading-tight">AI</h1>
+                  <h1 className="text-xs font-bold leading-tight">Pustakam</h1>
                 </div>
               )}
             </a>
             
+            {/* Close Button - Mobile Only */}
             <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
               isFolded ? 'max-w-0 opacity-0' : 'max-w-xs opacity-100'
             }`}>
               {!isFolded && (
                 <button 
                   onClick={onCloseSidebar} 
-                  className="p-2 hover:bg-[var(--color-hover-bg)] rounded-lg transition-colors duration-200 lg:hidden" 
+                  className="btn-ghost lg:hidden p-2 hover:bg-white/10 transition-colors duration-200" 
                   title="Close sidebar"
                 >
                   <X size={18} />
@@ -213,9 +183,10 @@ export function Sidebar({
             </div>
           </div>
           
+          {/* New Book Button - Fixed centering */}
           <button 
-            onClick={onNewConversation} 
-            className={`bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] hover:bg-[var(--color-accent-bg-hover)] w-full flex items-center justify-center gap-2 font-bold text-sm transition-all duration-300 ease-in-out hover:scale-105 active:scale-95 rounded-lg ${
+            onClick={onNewBook} 
+            className={`btn btn-primary w-full flex items-center justify-center gap-2 font-bold text-sm transition-all duration-300 ease-in-out hover:scale-105 active:scale-95 ${
               isFolded ? 'p-3' : 'py-2.5 px-4'
             }`}
           >
@@ -223,12 +194,12 @@ export function Sidebar({
             <span className={`transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap ${
               isFolded ? 'max-w-0 opacity-0 w-0' : 'max-w-xs opacity-100'
             }`}>
-              {!isFolded && 'New Chat'}
+              {!isFolded && 'New Book'}
             </span>
           </button>
         </div>
 
-        {/* Model Selection */}
+        {/* Model Selection - Fixed for collapsed mode */}
         <div className={`border-b border-[var(--color-border)] transition-all duration-300 ease-in-out ${
           isFolded ? 'p-2' : 'p-2'
         }`}>
@@ -238,53 +209,59 @@ export function Sidebar({
               className={`w-full flex items-center rounded-lg border transition-all duration-200 ease-in-out transform hover:scale-105 active:scale-95 ${
                 modelDropdownOpen 
                   ? 'border-blue-500/50 bg-blue-500/10 shadow-lg' 
-                  : 'border-[var(--color-border)] bg-[var(--color-card)] hover:bg-[var(--color-hover-bg)]'
+                  : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
               } ${
                 isFolded ? 'justify-center p-3' : 'justify-between p-2'
               }`}
-              title={isFolded ? `${currentProvider?.name || 'Select Model'} - ${currentModel?.name || 'No model'}` : undefined}
+              title={isFolded ? `${currentProvider?.name || 'Select Provider'} - ${currentModel?.name || 'No model selected'}` : undefined}
             >
               {isFolded ? (
+                /* Folded Mode - Just icon centered */
                 <>
-                  {currentProvider ? <currentProvider.icon /> : <Cpu className="w-4 h-4" />}
+                  {currentProvider ? <currentProvider.icon /> : <Brain className="w-4 h-4" />}
                 </>
               ) : (
+                /* Expanded Mode - Full layout */
                 <>
                   <div className="flex items-center gap-3">
-                    {currentProvider ? <currentProvider.icon /> : <Cpu className="w-4 h-4" />}
+                    {currentProvider ? <currentProvider.icon /> : <Brain className="w-4 h-4" />}
                     <div className="text-left">
-                      <div className="text-sm font-medium text-[var(--color-text-primary)] transition-colors duration-200">
-                        {currentProvider?.name || 'Select Model'}
+                      <div className="text-sm font-medium text-white transition-colors duration-200">
+                        {currentProvider?.name || 'Select Provider'}
                       </div>
-                      <div className="text-xs text-[var(--color-text-secondary)] truncate max-w-[140px]">
-                        {currentModel?.name || 'No model'}
+                      <div className="text-xs text-gray-400 truncate max-w-[140px] transition-colors duration-200">
+                        {currentModel?.name || 'No model selected'}
                       </div>
                     </div>
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-[var(--color-text-secondary)] transition-all duration-300 ease-in-out ${
-                    modelDropdownOpen ? 'rotate-180 text-blue-400' : ''
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-all duration-300 ease-in-out ${
+                    modelDropdownOpen ? 'rotate-180 text-blue-400' : 'hover:text-gray-300'
                   }`} />
                 </>
               )}
             </button>
             
+            {/* Provider name below icon in folded mode */}
             {isFolded && currentProvider && (
-              <div className="text-xs text-[var(--color-text-secondary)] text-center mt-1 leading-tight">
+              <div className="text-xs text-gray-400 text-center mt-1 leading-tight transition-all duration-300 ease-in-out">
                 {currentProvider.name.split(' ')[0]}
               </div>
             )}
 
+            {/* Dropdown Menu - Works in both modes */}
             {modelDropdownOpen && (
               <div className={`absolute z-[100] ${
                 isFolded ? 'left-full ml-2 top-0 w-64' : 'top-full left-0 right-0 mt-1'
-              } bg-[var(--color-sidebar)] border border-[var(--color-border)] rounded-lg shadow-xl max-h-80 overflow-y-auto animate-in slide-in-from-top-2 duration-200 ease-out`}>
-                {(Object.entries(modelConfig) as [keyof typeof modelConfig, typeof modelConfig.google][]).map(([provider, config]) => {
+              } bg-[var(--color-sidebar)] border border-white/10 rounded-lg shadow-xl max-h-80 overflow-y-auto
+              animate-in slide-in-from-top-2 duration-200 ease-out`}>
+                {(Object.entries(modelConfig) as [ModelProvider, typeof modelConfig.google][]).map(([provider, config]) => {
                   const hasApiKey = hasApiKeyForProvider(provider);
                   const IconComponent = config.icon;
                   
                   return (
                     <div key={provider} className="p-1">
-                      <div className="px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider border-b border-[var(--color-border)]">
+                      {/* Provider Header */}
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-white/5">
                         <div className="flex items-center gap-2">
                           <IconComponent />
                           {config.name}
@@ -297,9 +274,10 @@ export function Sidebar({
                         </div>
                       </div>
 
+                      {/* Models List */}
                       <div className="py-1">
                         {config.models.map((model) => {
-                          const isSelected = settings.selectedModel === model.id;
+                          const isSelected = settings.selectedModel === model.id && settings.selectedProvider === provider;
                           
                           return (
                             <button
@@ -311,7 +289,7 @@ export function Sidebar({
                                   setModelDropdownOpen(false);
                                   return;
                                 }
-                                onModelChange(model.id);
+                                onModelChange(model.id, provider);
                                 setModelDropdownOpen(false);
                               }}
                               disabled={!hasApiKey}
@@ -319,19 +297,23 @@ export function Sidebar({
                                 isSelected
                                   ? 'bg-blue-500/20 text-blue-300 shadow-md'
                                   : hasApiKey 
-                                    ? 'hover:bg-[var(--color-hover-bg)] text-[var(--color-text-primary)]' 
-                                    : 'text-[var(--color-text-placeholder)] cursor-not-allowed opacity-50'
+                                    ? 'hover:bg-white/5 text-gray-300 hover:text-white hover:shadow-sm' 
+                                    : 'text-gray-500 cursor-not-allowed opacity-50'
                               }`}
-                              title={!hasApiKey ? `Configure ${config.name} API key` : model.description}
+                              title={!hasApiKey ? `Configure ${config.name} API key in Settings` : model.description}
                             >
                               <div className="flex items-center gap-2 flex-1">
-                                {isSelected && <IconComponent />}
+                                {isSelected && (
+                                  <IconComponent />
+                                )}
                                 <div>
-                                  <div className="text-sm font-medium">{model.name}</div>
-                                  <div className="text-xs opacity-70">{model.description}</div>
+                                  <div className="text-sm font-medium transition-colors duration-200">{model.name}</div>
+                                  <div className="text-xs opacity-70 transition-opacity duration-200 group-hover:opacity-100">{model.description}</div>
                                 </div>
                               </div>
-                              {isSelected && <Check className="w-4 h-4 text-blue-400" />}
+                              {isSelected && (
+                                <Check className="w-4 h-4 text-blue-400 animate-in zoom-in-50 duration-200" />
+                              )}
                             </button>
                           );
                         })}
@@ -340,13 +322,14 @@ export function Sidebar({
                   );
                 })}
                 
-                <div className="border-t border-[var(--color-border)] p-1">
+                {/* Settings Link */}
+                <div className="border-t border-white/10 p-1">
                   <button
                     onClick={() => {
                       onOpenSettings();
                       setModelDropdownOpen(false);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)] rounded-md transition-all duration-200"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-white/5 rounded-md transition-all duration-200 ease-in-out transform hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <Settings className="w-4 h-4" />
                     Configure API Keys
@@ -357,7 +340,7 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* Content List */}
+        {/* Books List */}
         <div className={`flex-1 overflow-y-auto transition-all duration-300 ease-in-out ${
           isFolded ? 'p-1' : 'p-2'
         }`}>
@@ -366,134 +349,95 @@ export function Sidebar({
           }`}>
             {!isFolded && (
               <div className="relative mb-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 transition-colors duration-200" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search..."
-                  className="w-full bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg pl-9 pr-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+                  placeholder="Search books..."
+                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-white/10 transition-all duration-200 ease-in-out focus:scale-[1.02]"
                 />
               </div>
             )}
           </div>
           
           <div className="space-y-1">
-            {activeView === 'chat' ? (
-              sortedConversations.map(conv => {
-                const isSelected = currentConversationId === conv.id;
-                return (
-                  <div
-                    key={conv.id}
-                    onClick={() => onSelectConversation(conv.id)}
-                    className={`group flex items-center w-full rounded-lg cursor-pointer transition-all duration-200 ease-in-out transform hover:scale-[1.02] active:scale-[0.98] ${
-                      isFolded ? 'justify-center p-2' : 'gap-3 p-2'
-                    } ${
-                      isSelected
-                        ? 'bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] font-semibold shadow-md'
-                        : 'text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)]'
-                    }`}
-                    title={isFolded ? conv.title : undefined}
-                  >
-                    <Book className={`w-4 h-4 shrink-0 ${isSelected ? '' : 'text-[var(--color-text-secondary)]'}`} />
-                    <div className={`flex flex-1 items-center min-w-0 transition-all duration-300 ease-in-out overflow-hidden ${
-                      isFolded ? 'max-w-0 opacity-0' : 'max-w-full opacity-100'
-                    }`}>
-                      {!isFolded && (
-                        <>
-                          <span className="flex-1 text-sm font-medium truncate">{conv.title}</span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onDeleteConversation(conv.id); }}
-                            className={`p-1.5 opacity-0 group-hover:opacity-100 rounded-md transition-all duration-200 ${
-                              isSelected 
-                                ? 'hover:bg-[var(--color-accent-bg-hover)]' 
-                                : 'hover:bg-[var(--color-active-bg)]'
-                            }`}
-                            title="Delete conversation"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </>
-                      )}
-                    </div>
+            {sortedBooks.map(book => {
+              const isSelected = currentBookId === book.id;
+              const CategoryIcon = getCategoryIcon(book.category);
+              return (
+                <div
+                  key={book.id}
+                  onClick={() => onSelectBook(book.id)}
+                  className={`group flex items-center w-full rounded-lg cursor-pointer transition-all duration-200 ease-in-out transform hover:scale-[1.02] active:scale-[0.98] ${
+                    isFolded ? 'justify-center p-2' : 'gap-3 p-2'
+                  } ${
+                    isSelected
+                      ? 'bg-white text-black font-semibold shadow-md'
+                      : 'text-gray-300 hover:bg-white/5 hover:text-white hover:shadow-sm'
+                  }`}
+                  title={isFolded ? book.title : undefined}
+                >
+                  <CategoryIcon className={`w-4 h-4 shrink-0 transition-colors duration-200 ${
+                    isSelected ? 'text-black' : 'text-gray-400'
+                  }`} />
+                  <div className={`flex flex-1 items-center min-w-0 transition-all duration-300 ease-in-out overflow-hidden ${
+                    isFolded ? 'max-w-0 opacity-0' : 'max-w-full opacity-100'
+                  }`}>
+                    {!isFolded && (
+                      <>
+                        <span className="flex-1 text-sm font-medium truncate">{book.title}</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDeleteBook(book.id); }}
+                          className={`p-1.5 opacity-0 group-hover:opacity-100 rounded-md transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-90 ${
+                            isSelected 
+                              ? 'text-gray-600 hover:text-red-500 hover:bg-black/10' 
+                              : 'text-gray-500 hover:text-red-400 hover:bg-red-900/20'
+                          }`}
+                          title="Delete book"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
                   </div>
-                );
-              })
-            ) : (
-              sortedNotes.map(note => {
-                const isSelected = currentNoteId === note.id;
-                return (
-                  <div
-                    key={note.id}
-                    onClick={() => onSelectNote(note.id)}
-                    className={`group flex items-center w-full rounded-lg cursor-pointer transition-all duration-200 ${
-                      isFolded ? 'justify-center p-2' : 'gap-3 p-2'
-                    } ${
-                      isSelected
-                        ? 'bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] font-semibold'
-                        : 'text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)]'
-                    }`}
-                    title={isFolded ? note.title : undefined}
-                  >
-                    <Book className="w-4 h-4 shrink-0" />
-                    <div className={`flex flex-1 items-center min-w-0 transition-all ${
-                      isFolded ? 'max-w-0 opacity-0' : 'max-w-full opacity-100'
-                    }`}>
-                      {!isFolded && (
-                        <>
-                          <span className="flex-1 text-sm font-medium truncate">{note.title}</span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id); }}
-                            className="p-1.5 opacity-0 group-hover:opacity-100 rounded-md transition-all"
-                            title="Delete note"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                </div>
+              );
+            })}
           </div>
           
-          {((activeView === 'chat' && sortedConversations.length === 0) || 
-            (activeView === 'note' && sortedNotes.length === 0)) && !isFolded && (
-            <div className="text-center p-6 text-sm text-[var(--color-text-secondary)]">
-              <p>No {activeView === 'chat' ? 'conversations' : 'notes'} found.</p>
-            </div>
-          )}
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+            isFolded ? 'max-h-0 opacity-0' : 'max-h-full opacity-100'
+          }`}>
+            {sortedBooks.length === 0 && !isFolded && (
+              <div className="text-center p-6 text-sm text-gray-500">
+                <p>No books found.</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className={`border-t border-[var(--color-border)] transition-all duration-300 ${
+        {/* Footer - Settings, Collapse Button, and Creator Credit */}
+        <div className={`border-t border-[var(--color-border)] transition-all duration-300 ease-in-out ${
           isFolded ? 'p-2' : 'p-0'
         }`}>
           {!isFolded ? (
             <div>
+              {/* Settings and Collapse Button */}
               <div className="p-3 flex items-center gap-2">
-                {/* Theme Toggle */}
-                <button 
-                  onClick={toggleTheme}
-                  className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)] rounded-lg transition-all duration-200 theme-toggle"
-                  title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-                >
-                  {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                </button>
-                
                 <button 
                   onClick={onOpenSettings}
-                  className="flex-1 flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)] rounded-lg transition-all duration-200"
+                  className="flex-1 flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 ease-in-out transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Settings className="w-5 h-5" />
                   <span>Settings</span>
                 </button>
                 
+                {/* Collapse Button */}
                 {onToggleFold && (
                   <button 
                     onClick={onToggleFold} 
-                    className="hidden lg:block p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)] rounded-lg transition-all duration-200"
+                    className="hidden lg:block p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-90"
                     title="Collapse sidebar"
                   >
                     <ChevronLeft size={18} />
@@ -501,15 +445,16 @@ export function Sidebar({
                 )}
               </div>
               
+              {/* Creator Credit */}
               <div className="px-3 pb-2">
-                <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                <div className="flex items-center gap-2 text-xs text-gray-500">
                   <User className="w-3 h-3" />
                   <span>Made by</span>
                   <a
                     href="https://linkedin.com/in/tanmay-kalbande"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium hover:text-[var(--color-text-primary)] transition-colors duration-200"
+                    className="font-medium text-gray-400 hover:text-white transition-colors duration-200"
                   >
                     Tanmay Kalbande
                   </a>
@@ -519,25 +464,18 @@ export function Sidebar({
           ) : (
             <div className="flex flex-col gap-2">
               <button 
-                onClick={toggleTheme}
-                className="w-full p-3 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)] rounded-lg transition-all theme-toggle"
-                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              >
-                {theme === 'dark' ? <Sun className="w-5 h-5 mx-auto" /> : <Moon className="w-5 h-5 mx-auto" />}
-              </button>
-              
-              <button 
                 onClick={onOpenSettings}
-                className="w-full p-3 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)] rounded-lg transition-all"
+                className="w-full p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-90"
                 title="Settings"
               >
                 <Settings className="w-5 h-5 mx-auto" />
               </button>
               
+              {/* Expand Button for Folded State */}
               {onToggleFold && (
                 <button 
                   onClick={onToggleFold} 
-                  className="hidden lg:block w-full p-3 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)] rounded-lg transition-all"
+                  className="hidden lg:block w-full p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-90"
                   title="Expand sidebar"
                 >
                   <ChevronRight size={18} className="mx-auto" />
@@ -547,6 +485,7 @@ export function Sidebar({
           )}
         </div>
 
+        {/* Click outside handler for dropdown */}
         {modelDropdownOpen && (
           <div 
             className="fixed inset-0 z-[99]" 
