@@ -1,5 +1,5 @@
 /* ==========================================================================
-   FILE: src/index.css - ENHANCED WITH LIGHT THEME
+   FILE: src/index.css - FIXED RESPONSIVE VERSION
    ========================================================================== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @tailwind base;
@@ -16,7 +16,6 @@
   }
 
   :root {
-    /* Dark Theme (Default) */
     --color-bg: #0A0A0A;
     --color-sidebar: #141414;
     --color-card: #1F1F1F;
@@ -27,38 +26,8 @@
     --color-accent-bg: #FFFFFF;
     --color-accent-text: #0A0A0A;
     --color-accent-bg-hover: #F0F0F0;
-    --color-code-bg: #121212;
-    --color-hover-bg: rgba(255, 255, 255, 0.05);
-    --color-active-bg: rgba(255, 255, 255, 0.1);
-    --color-shadow: rgba(0, 0, 0, 0.3);
-    --color-overlay: rgba(0, 0, 0, 0.5);
     --font-weight: 500;
     --font-english: 'Inter', sans-serif;
-  }
-
-  /* Light Theme */
-  [data-theme="light"] {
-    --color-bg: #FAFAFA;
-    --color-sidebar: #FFFFFF;
-    --color-card: #FFFFFF;
-    --color-border: #E5E7EB;
-    --color-text-primary: #1F2937;
-    --color-text-secondary: #6B7280;
-    --color-text-placeholder: #9CA3AF;
-    --color-accent-bg: #1F2937;
-    --color-accent-text: #FFFFFF;
-    --color-accent-bg-hover: #374151;
-    --color-code-bg: #F3F4F6;
-    --color-hover-bg: rgba(0, 0, 0, 0.03);
-    --color-active-bg: rgba(0, 0, 0, 0.06);
-    --color-shadow: rgba(0, 0, 0, 0.08);
-    --color-overlay: rgba(0, 0, 0, 0.3);
-  }
-
-  /* Light theme selection color */
-  [data-theme="light"] ::selection {
-    background-color: #3B82F6;
-    color: #FFFFFF;
   }
 
   * {
@@ -75,7 +44,6 @@
     font-family: var(--font-english);
     margin: 0;
     padding: 0;
-    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   html {
@@ -84,7 +52,7 @@
 }
 
 /* ==========================================================================
-   Components Layer - ENHANCED FOR LIGHT THEME
+   Components Layer - FIXED RESPONSIVE
    ========================================================================== */
 @layer components {
   /* --- Global Scrollbar Styling --- */
@@ -107,14 +75,6 @@
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--color-border) transparent;
-  }
-
-  /* --- Light theme specific scrollbar --- */
-  [data-theme="light"] ::-webkit-scrollbar-thumb {
-    background-color: #D1D5DB;
-  }
-  [data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-    background-color: #9CA3AF;
   }
 
   /* --- Keyframe Animations --- */
@@ -180,23 +140,16 @@
     height: 100dvh;
     position: relative;
     z-index: 20;
-    background-color: var(--color-sidebar);
-    border-right: 1px solid var(--color-border);
-  }
-
-  /* Light theme sidebar shadow */
-  [data-theme="light"] .sidebar {
-    box-shadow: 2px 0 8px var(--color-shadow);
   }
 
   /* Desktop sidebar */
   @media (min-width: 1024px) {
     .sidebar {
       position: static;
-      width: 16rem;
+      width: 16rem; /* 64 * 4px = 256px */
     }
     .sidebar.sidebar-folded {
-      width: 4rem;
+      width: 4rem; /* 16 * 4px = 64px */
     }
   }
 
@@ -217,7 +170,7 @@
     .sidebar-backdrop {
       position: fixed;
       inset: 0;
-      background: var(--color-overlay);
+      background: rgba(0, 0, 0, 0.5);
       backdrop-filter: blur(4px);
       z-index: 40;
     }
@@ -234,7 +187,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-width: 0;
+    min-width: 0; /* Prevents flex item from overflowing */
     position: relative;
   }
 
@@ -259,7 +212,7 @@
   }
 
   .chat-messages-container {
-    max-width: 48rem;
+    max-width: 48rem; /* 3xl */
     margin: 0 auto;
     width: 100%;
   }
@@ -282,13 +235,6 @@
     max-width: 85%;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    background-color: var(--color-card);
-    border: 1px solid var(--color-border);
-  }
-
-  /* Light theme message bubble enhancement */
-  [data-theme="light"] .message-bubble {
-    box-shadow: 0 1px 3px var(--color-shadow);
   }
 
   @media (max-width: 768px) {
@@ -301,16 +247,10 @@
     transform: translateY(-1px) translateZ(0);
   }
 
-  /* Light theme hover effect */
-  [data-theme="light"] .message-bubble:hover {
-    box-shadow: 0 4px 6px var(--color-shadow);
-  }
-
   /* --- CHAT INPUT RESPONSIVE --- */
   .chat-input-container {
     padding: 1rem;
     flex-shrink: 0;
-    background-color: var(--color-bg);
   }
 
   @media (max-width: 768px) {
@@ -340,17 +280,6 @@
     border-radius: 1rem;
     padding: 0.5rem;
     gap: 0.5rem;
-    transition: all 0.2s ease;
-  }
-
-  /* Light theme input form enhancement */
-  [data-theme="light"] .chat-input-form {
-    box-shadow: 0 2px 8px var(--color-shadow);
-  }
-
-  [data-theme="light"] .chat-input-form:focus-within {
-    border-color: #3B82F6;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
   }
 
   .chat-input-textarea {
@@ -386,10 +315,6 @@
     animation: typing 1.4s infinite ease-in-out;
   }
 
-  [data-theme="light"] .typing-dot {
-    background-color: #6B7280;
-  }
-
   .typing-dot:nth-child(1) { animation-delay: -0.32s; }
   .typing-dot:nth-child(2) { animation-delay: -0.16s; }
 
@@ -411,13 +336,13 @@
 
   .interactive-button:hover {
     transform: translateY(-2px) translateZ(0);
-    box-shadow: 0 4px 12px var(--color-shadow);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
   .interactive-button:active {
     transform: translateY(0) translateZ(0);
     transition-duration: 0.1s;
-    box-shadow: 0 2px 4px var(--color-shadow);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   }
 
   .interactive-button:disabled {
@@ -470,7 +395,6 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background: var(--color-overlay);
   }
 
   @media (max-width: 768px) {
@@ -488,13 +412,6 @@
     max-width: 28rem;
     max-height: 90vh;
     overflow-y: auto;
-    background-color: var(--color-sidebar);
-    border: 1px solid var(--color-border);
-  }
-
-  /* Light theme modal enhancement */
-  [data-theme="light"] .modal-content {
-    box-shadow: 0 20px 25px -5px var(--color-shadow), 0 10px 10px -5px var(--color-shadow);
   }
 
   @media (max-width: 768px) {
@@ -508,18 +425,6 @@
   .modal-content.open {
     transform: translateY(0);
     opacity: 1;
-  }
-
-  /* --- CODE BLOCK STYLING --- */
-  .code-block-container {
-    background-color: var(--color-code-bg);
-    border: 1px solid var(--color-border);
-    border-radius: 0.5rem;
-    overflow: hidden;
-  }
-
-  [data-theme="light"] .code-block-container {
-    box-shadow: 0 1px 3px var(--color-shadow);
   }
 
   /* --- RESPONSIVE GRID FIXES --- */
@@ -548,24 +453,6 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-  }
-
-  /* --- THEME TOGGLE BUTTON --- */
-  .theme-toggle {
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-    transition: all 0.2s ease;
-    background-color: var(--color-hover-bg);
-    border: 1px solid var(--color-border);
-  }
-
-  .theme-toggle:hover {
-    background-color: var(--color-active-bg);
-    transform: scale(1.05);
-  }
-
-  .theme-toggle:active {
-    transform: scale(0.95);
   }
 
   /* --- SAFE AREA FOR PWA --- */
@@ -608,10 +495,6 @@
       --color-border: #404040;
       --color-card: #2a2a2a;
     }
-    [data-theme="light"] {
-      --color-border: #D1D5DB;
-      --color-card: #F3F4F6;
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -636,11 +519,13 @@
       font-size: 16px;
     }
 
+    /* Fix for mobile viewport units */
     .mobile-height {
       height: 100vh;
       height: 100dvh;
     }
 
+    /* Mobile menu button positioning */
     .mobile-menu-button {
       position: fixed;
       top: 1rem;
@@ -663,8 +548,7 @@
   @media print {
     .sidebar,
     .chat-input-container,
-    .mobile-menu-button,
-    .theme-toggle {
+    .mobile-menu-button {
       display: none !important;
     }
     .main-content {
@@ -673,34 +557,6 @@
     .message-bubble {
       max-width: 100% !important;
       break-inside: avoid;
-    }
-  }
-
-  /* --- LIGHT THEME SPECIFIC ENHANCEMENTS --- */
-  [data-theme="light"] {
-    /* Better contrast for links */
-    a {
-      color: #2563EB;
-    }
-    a:hover {
-      color: #1D4ED8;
-    }
-
-    /* Softer shadows for cards */
-    .card-shadow {
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    }
-
-    /* Better button contrast */
-    .btn-secondary {
-      background-color: #F3F4F6;
-      color: #374151;
-      border: 1px solid #E5E7EB;
-    }
-
-    .btn-secondary:hover {
-      background-color: #E5E7EB;
-      border-color: #D1D5DB;
     }
   }
 }
