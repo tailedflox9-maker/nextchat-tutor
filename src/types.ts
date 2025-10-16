@@ -33,6 +33,7 @@ export interface APISettings {
   mistralApiKey: string;
   selectedModel: 'google' | 'zhipu' | 'mistral-small' | 'mistral-codestral';
   selectedTutorMode: TutorMode;
+  theme: 'light' | 'dark' | 'system'; // New theme setting
 }
 
 export interface StudySession {
