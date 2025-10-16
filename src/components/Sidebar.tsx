@@ -105,9 +105,9 @@ export function Sidebar({
       <div className="p-2 border-b border-[var(--color-border)] flex flex-col gap-2">
         <div className="flex items-center justify-between">
           {!isFolded && (
-            <a href="https://tanmay-kalbande.github.io/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group px-2">
+            <a href="https://www.linkedin.com/in/tanmay-kalbande/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group px-2">
               <img src="/white-logo.png" alt="Logo" className="w-7 h-7" />
-              <h1 className="text-xl font-bold text-[var(--color-text-primary)] group-hover:text-gray-300 transition-colors">
+              <h1 className="text-xl font-bold text-[var(--color-text-primary)] group-hover:text-gray-500 dark:group-hover:text-gray-300 transition-colors">
                 AI Tutor
               </h1>
             </a>
@@ -157,8 +157,8 @@ export function Sidebar({
                   onClick={() => onModelChange(model.id as any)}
                   className={`w-full flex justify-center items-center p-2 rounded-lg transition-all duration-200 border ${
                     settings.selectedModel === model.id
-                      ? 'bg-[var(--color-card)] border-[var(--color-border)] text-white'
-                      : 'bg-transparent border-transparent hover:bg-[var(--color-card)] text-[var(--color-text-secondary)] hover:text-white'
+                      ? 'bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-text-primary)]'
+                      : 'bg-transparent border-transparent hover:bg-[var(--color-card)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                   }`}
                   title={model.name}
                 >
@@ -178,8 +178,8 @@ export function Sidebar({
                     onClick={() => onModelChange(model.id as any)}
                     className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-200 border transform hover:scale-105 active:scale-100 ${
                       settings.selectedModel === model.id
-                        ? 'bg-[var(--color-card)] border-[var(--color-border)] text-white scale-105'
-                        : 'bg-transparent border-transparent hover:bg-[var(--color-card)] text-[var(--color-text-secondary)] hover:text-white'
+                        ? 'bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-text-primary)] scale-105'
+                        : 'bg-transparent border-transparent hover:bg-[var(--color-card)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                     }`}
                     title={model.name}
                   >
@@ -246,7 +246,7 @@ export function Sidebar({
                             onTogglePinConversation(conversation.id);
                           }}
                           className={`p-1 rounded ${
-                            currentConversationId === conversation.id ? 'hover:bg-black/10' : 'hover:bg-[var(--color-border)]'
+                            currentConversationId === conversation.id ? 'hover:bg-black/10 dark:hover:bg-white/10' : 'hover:bg-[var(--color-border)]'
                           }`}
                           title={conversation.isPinned ? 'Unpin' : 'Pin'}
                         >
@@ -258,7 +258,7 @@ export function Sidebar({
                             handleStartEditing(conversation);
                           }}
                           className={`p-1 rounded ${
-                            currentConversationId === conversation.id ? 'hover:bg-black/10' : 'hover:bg-[var(--color-border)]'
+                            currentConversationId === conversation.id ? 'hover:bg-black/10 dark:hover:bg-white/10' : 'hover:bg-[var(--color-border)]'
                           }`}
                           title="Rename"
                         >
@@ -269,8 +269,8 @@ export function Sidebar({
                             e.stopPropagation();
                             onDeleteConversation(conversation.id);
                           }}
-                          className={`p-1 rounded ${
-                            currentConversationId === conversation.id ? 'hover:bg-black/10 text-red-400' : 'hover:bg-red-900/30 text-red-400'
+                          className={`p-1 rounded text-red-500 dark:text-red-400 ${
+                            currentConversationId === conversation.id ? 'hover:bg-black/10 dark:hover:bg-white/10' : 'hover:bg-red-100 dark:hover:bg-red-900/30'
                           }`}
                           title="Delete"
                         >
@@ -310,7 +310,7 @@ export function Sidebar({
                         e.stopPropagation();
                         onDeleteNote(note.id);
                       }}
-                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-900/30 text-red-400"
+                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -352,7 +352,7 @@ export function Sidebar({
         {!isFolded && (
           <div className="mt-2 text-center">
             <a
-              href="https://tanmay-kalbande.github.io/"
+              href="https://www.linkedin.com/in/tanmay-kalbande/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
