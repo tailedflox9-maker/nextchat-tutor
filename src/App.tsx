@@ -69,6 +69,26 @@ function App() {
   useEffect(() => { storageUtils.saveNotes(notes); }, [notes]);
   useEffect(() => { localStorage.setItem('ai-tutor-sidebar-folded', JSON.stringify(sidebarFolded)); }, [sidebarFolded]);
 
+  // New: Effect to manage theme switching
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const isDark =
+      settings.theme === 'dark' ||
+      (settings.theme === 'system' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches);
+    
+    root.classList.toggle('dark', isDark);
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (settings.theme === 'system') {
+        root.classList.toggle('dark', mediaQuery.matches);
+      }
+    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [settings.theme]);
+
   // --- MEMOS ---
   const currentConversation = useMemo(() => conversations.find(c => c.id === currentConversationId), [conversations, currentConversationId]);
   const currentNote = useMemo(() => notes.find(n => n.id === currentNoteId), [notes, currentNoteId]);
