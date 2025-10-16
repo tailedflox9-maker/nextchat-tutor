@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { Conversation, Message } from '../types';
+import { useTheme } from '../context/ThemeContext'; // Import the hook
 
+// ... (interface props remain the same)
 interface ChatAreaProps {
   conversation: Conversation | undefined;
   onSendMessage: (message: string) => void;
@@ -17,6 +19,7 @@ interface ChatAreaProps {
   onRegenerateResponse?: (messageId: string) => void;
 }
 
+
 export function ChatArea({
   conversation,
   onSendMessage,
@@ -30,6 +33,7 @@ export function ChatArea({
   onEditMessage,
   onRegenerateResponse,
 }: ChatAreaProps) {
+  const { logoSrc } = useTheme(); // Get logoSrc from context
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -43,7 +47,6 @@ export function ChatArea({
   }, []);
 
   useEffect(() => {
-    // A small delay allows the DOM to update before scrolling
     const timeoutId = setTimeout(scrollToBottom, 100);
     return () => clearTimeout(timeoutId);
   }, [allMessages.length, streamingMessage?.content, scrollToBottom]);
@@ -56,7 +59,7 @@ export function ChatArea({
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center max-w-md w-full px-4">
             <img
-              src="/white-logo.png"
+              src={logoSrc} // Use dynamic logoSrc
               alt="AI Tutor Logo"
               className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6"
             />
@@ -82,7 +85,7 @@ export function ChatArea({
       </div>
     );
   }
-
+  // ... rest of the component is unchanged
   return (
     <div className="chat-area">
       <div
