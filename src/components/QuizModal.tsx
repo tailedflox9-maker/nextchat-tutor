@@ -46,7 +46,7 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
 
   const score = useMemo(() => {
     if (!session) return 0;
-    return session.questions.reduce((acc, question, index) => {
+    return session.questions.reduce((acc, question) => {
       const correctAnswer = question.options[question.correctAnswer];
       return userAnswers[question.id] === correctAnswer ? acc + 1 : acc;
     }, 0);
@@ -89,9 +89,9 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
 
             if (showFeedback) {
               if (isCorrectAnswer) {
-                buttonClass = 'bg-green-900/50 border-green-500/60 text-green-300';
+                buttonClass = 'bg-green-100 border-green-300 text-green-700 dark:bg-green-900/50 dark:border-green-500/60 dark:text-green-300';
               } else if (isSelected && !isCorrectAnswer) {
-                buttonClass = 'bg-red-900/50 border-red-500/60 text-red-300';
+                buttonClass = 'bg-red-100 border-red-300 text-red-700 dark:bg-red-900/50 dark:border-red-500/60 dark:text-red-300';
               } else {
                  buttonClass = 'bg-[var(--color-card)] border-transparent opacity-60';
               }
@@ -104,7 +104,7 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
                 className={`w-full text-left p-4 border rounded-lg transition-all duration-200 text-base font-semibold flex items-center justify-between disabled:cursor-not-allowed group ${buttonClass}`}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-sm font-bold ${showFeedback && isCorrectAnswer ? 'bg-green-500/80 text-white' : 'bg-[var(--color-border)] group-hover:bg-white/10'}`}>
+                  <div className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-sm font-bold ${showFeedback && isCorrectAnswer ? 'bg-green-500/80 text-white' : 'bg-[var(--color-border)] group-hover:bg-black/10 dark:group-hover:bg-white/10'}`}>
                     {String.fromCharCode(65 + index)}
                   </div>
                   <span>{option}</span>
@@ -117,9 +117,9 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
         </div>
 
         {showFeedback && currentQuestion.explanation && (
-          <div className="mt-8 p-4 rounded-lg bg-[var(--color-bg)] animate-fade-in-up border border-[var(--color-border)] flex items-start gap-3">
-            <Lightbulb className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-[var(--color-text-secondary)]">{currentQuestion.explanation}</p>
+          <div className="mt-8 p-4 rounded-lg bg-yellow-50/70 dark:bg-[var(--color-bg)] animate-fade-in-up border border-yellow-200 dark:border-[var(--color-border)] flex items-start gap-3">
+            <Lightbulb className="w-5 h-5 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-yellow-800 dark:text-[var(--color-text-secondary)]">{currentQuestion.explanation}</p>
           </div>
         )}
       </div>
@@ -133,7 +133,7 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
         Quiz Completed!
       </h3>
       <p className="text-base text-[var(--color-text-secondary)] mb-6">{getScoreFeedback}</p>
-      <p className="text-6xl font-bold text-[var(--color-accent-bg)] mb-2">
+      <p className="text-6xl font-bold text-blue-500 dark:text-[var(--color-accent-bg)] mb-2">
         {score} <span className="text-3xl text-[var(--color-text-secondary)]">/ {session.questions.length}</span>
       </p>
     </div>
@@ -150,7 +150,7 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
         {/* Progress Bar */}
         <div className="absolute top-0 left-0 w-full bg-[var(--color-card)] h-1.5">
           <div
-            className="bg-[var(--color-accent-bg)] h-1.5 rounded-r-full transition-all duration-300 ease-out"
+            className="bg-blue-500 dark:bg-[var(--color-accent-bg)] h-1.5 rounded-r-full transition-all duration-300 ease-out"
             style={{ width: `${quizCompleted ? 100 : progress}%` }}
           />
         </div>
@@ -171,7 +171,7 @@ export function QuizModal({ isOpen, onClose, session }: QuizModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end p-4 border-t border-[var(--color-border)] bg-[var(--color-bg)]/50 mt-auto">
+        <div className="flex justify-end p-4 border-t border-[var(--color-border)] bg-gray-50/50 dark:bg-[var(--color-bg)]/50 mt-auto">
           {quizCompleted ? (
             <button onClick={onClose} className="w-full sm:w-auto interactive-button px-6 py-2.5 rounded-lg font-bold bg-[var(--color-accent-bg)] text-[var(--color-accent-text)] hover:bg-[var(--color-accent-bg-hover)]">
               Finish
