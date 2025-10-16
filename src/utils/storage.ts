@@ -1,4 +1,4 @@
-import { Conversation, APISettings, Note, TutorMode } from '../types';
+import { Conversation, APISettings, Note } from '../types';
 
 const CONVERSATIONS_KEY = 'ai-tutor-conversations';
 const SETTINGS_KEY = 'ai-tutor-settings';
@@ -10,6 +10,7 @@ const defaultSettings: APISettings = {
   mistralApiKey: '',
   selectedModel: 'google',
   selectedTutorMode: 'standard', // Default tutor mode
+  theme: 'system', // New: Default theme setting
 };
 
 export const storageUtils = {
